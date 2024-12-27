@@ -1,0 +1,15 @@
+defmodule Repo.Migrations.CreateMagicAuthTokens do
+  use Ecto.Migration
+
+  def change do
+    execute "CREATE EXTENSION IF NOT EXISTS citext"
+
+    create table(:magic_auth_tokens) do
+      add :email, :citext, null: false
+      add :value, :string, null: false
+      timestamps(updated_at: false)
+    end
+
+    create index(:magic_auth_tokens, [:email])
+  end
+end
