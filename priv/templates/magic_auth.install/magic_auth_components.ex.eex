@@ -1,0 +1,68 @@
+defmodule <%= @web_module %>.MagicAuthComponents do
+  use Phoenix.Component
+
+  def login_form(assigns) do
+    ~H"""
+    <div class="min-h-screen bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+        <div class="text-center mb-8">
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">Bem-vindo!</h1>
+          <p class="text-gray-600">Digite seu e-mail para fazer login</p>
+        </div>
+
+        <.form for={%{}} phx-submit="login" phx-change="validate" class="space-y-6">
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+              Endereço de E-mail
+            </label>
+            <div class="relative">
+              <input
+                type="email"
+                name="email"
+                id="email"
+                value={@email}
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                placeholder="seu@email.com"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            class="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors duration-200 font-medium"
+          >
+            Enviar Link Mágico
+          </button>
+        </.form>
+
+        <%%= if @submitted do %>
+          <div class="mt-6 p-4 bg-green-50 rounded-lg">
+            <p class="text-green-800 text-center">
+              ✨ Link mágico enviado! Verifique seu e-mail.
+            </p>
+          </div>
+        <%% end %>
+      </div>
+    </div>
+    """
+  end
+
+  def magic_auth_success(assigns) do
+    ~H"""
+    <div class="min-h-screen bg-gradient-to-br from-purple-600 to-blue-500 flex items-center justify-center p-4">
+      <div class="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+        <div class="mb-6">
+          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+            <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">Login Realizado com Sucesso!</h2>
+        <p class="text-gray-600 mb-8">Você está autenticado e será redirecionado em instantes.</p>
+      </div>
+    </div>
+    """
+  end
+end
