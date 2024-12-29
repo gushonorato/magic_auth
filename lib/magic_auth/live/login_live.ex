@@ -4,24 +4,24 @@ defmodule MagicAuth.LoginLive do
   alias Ecto.Changeset
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, email: "", submitted: false)}
+    {:ok, assign(socket, form: changeset() |> to_form(as: "auth"))}
   end
 
-  def handle_event("validate", %{"email" => email}, socket) do
-    form =
-      %{email: email}
-      |> changeset()
-      |> Map.put(:action, :validate)
-      |> to_form()
+  # def handle_event("validate", %{"email" => email}, socket) do
+  #   form =
+  #     %{email: email}
+  #     |> changeset()
+  #     |> Map.put(:action, :validate)
+  #     |> to_form()
 
-    {:noreply, assign(socket, form: form)}
-  end
+  #   {:noreply, assign(socket, form: form)}
+  # end
 
-  def handle_event("login", %{"email" => _email}, socket) do
-    {:noreply, assign(socket, submitted: true)}
-  end
+  # def handle_event("login", %{"email" => _email}, socket) do
+  #   {:noreply, assign(socket, submitted: true)}
+  # end
 
-  def changeset(attrs) do
+  def changeset(attrs \\ %{}) do
     types = %{email: :string}
 
     {%{}, types}
@@ -37,7 +37,7 @@ defmodule MagicAuth.LoginLive do
 
   def render(assigns) do
     ~H"""
-    <.login_form />
+    <.login_form form={@form} />
     """
   end
 end
