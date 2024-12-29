@@ -1,4 +1,4 @@
-defmodule MagicAuthWeb.LoginLive do
+defmodule MagicAuth.LoginLive do
   use Phoenix.LiveView
 
   alias Ecto.Changeset
