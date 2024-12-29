@@ -6,6 +6,10 @@ defmodule Mix.Tasks.MagicAuth.Install do
 
   @template_dir "#{:code.priv_dir(:magic_auth)}/templates/magic_auth.install"
 
+  def base_output_path do
+    Application.get_env(:magic_auth, :install_task_output_path, "")
+  end
+
   def run(args) do
     args
     |> build_assigns()
@@ -37,7 +41,10 @@ defmodule Mix.Tasks.MagicAuth.Install do
   defp install_magic_token_migration_file(assigns) do
     copy_template(
       "#{@template_dir}/create_magic_auth_tokens.exs.eex",
-      "priv/repo/migrations/#{generate_migration_timestamp()}_create_magic_auth_tokens.exs",
+      Path.join([
+        base_output_path(),
+        "priv/repo/migrations/#{generate_migration_timestamp()}_create_magic_auth_tokens.exs"
+      ]),
       assigns
     )
   end
@@ -50,7 +57,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
   end
 
   defp install_magic_auth_components(assigns) do
-    components_dir = "lib/#{assigns.app_name}_web/components"
+    components_dir = Path.join([base_output_path(), "lib/#{assigns.app_name}_web/components"])
 
     copy_template(
       "#{@template_dir}/magic_auth_components.ex.eex",
@@ -58,7 +65,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
       assigns
     )
 
-    config_file = "config/config.exs"
+    config_file = Path.join([base_output_path(), "config/config.exs"])
     Mix.shell().info(IO.ANSI.cyan() <> "* injecting " <> IO.ANSI.reset() <> "#{config_file}")
 
     config_content = File.read!(config_file)

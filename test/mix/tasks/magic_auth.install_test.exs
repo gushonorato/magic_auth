@@ -5,30 +5,35 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
   import ExUnit.CaptureIO
 
   setup do
-    File.mkdir_p!("config")
+    output_path = "test/mix/tasks/magic_auth_install_test_output_files"
 
-    File.write!("config/config.exs", """
+    Application.put_env(:magic_auth, :install_task_output_path, output_path)
+
+    File.mkdir_p!(Path.join(output_path, "config"))
+    File.mkdir_p!(Path.join(output_path, "config"))
+
+    File.write!(Path.join(output_path, "config/config.exs"), """
     use Mix.Config
     """)
 
     on_exit(fn ->
-      File.rm_rf!("priv/repo")
-      File.rm_rf!("lib/magic_auth/components")
-      File.rm_rf!("config/config.exs")
+      File.rm_rf!(output_path)
     end)
 
     :ok
+    {:ok, %{output_path: output_path}}
   end
 
-  test "creates migration file successfully" do
+  test "creates migration file successfully", %{output_path: output_path} do
     output =
       capture_io(fn ->
         run(%{})
       end)
 
-    assert File.dir?("priv/repo/migrations")
+    assert File.dir?(Path.join(output_path, "priv/repo/migrations"))
 
-    [migration_file] = Path.wildcard("priv/repo/migrations/*_create_magic_auth_tokens.exs")
+    [migration_file] =
+      Path.wildcard(Path.join(output_path, "priv/repo/migrations/*_create_magic_auth_tokens.exs"))
 
     assert File.exists?(migration_file)
 
@@ -48,12 +53,12 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert output =~ "Magic Auth installed successfully!"
   end
 
-  test "creates magic auth components file" do
+  test "creates magic auth components file", %{output_path: output_path} do
     capture_io(fn ->
       run([])
     end)
 
-    components_file = "lib/magic_auth_web/components/magic_auth_components.ex"
+    components_file = Path.join(output_path, "lib/magic_auth_web/components/magic_auth_components.ex")
 
     assert File.exists?(components_file)
 
@@ -62,39 +67,39 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert content =~ "use Phoenix.Component"
   end
 
-  test "injects configuration into config.exs" do
+  test "injects configuration into config.exs", %{output_path: output_path} do
     capture_io(fn ->
       run([])
     end)
 
-    config_content = File.read!("config/config.exs")
+    config_content = File.read!(Path.join(output_path, "config/config.exs"))
 
     assert config_content =~ "config :magic_auth, ui_components: MagicAuthWeb.MagicAuthComponents"
   end
 
-  test "doesn't duplicate configuration if already present" do
-    File.rm("config/config.exs")
+  test "doesn't duplicate configuration if already present", %{output_path: output_path} do
+    File.rm(Path.join(output_path, "config/config.exs"))
 
-    File.write!("config/config.exs", """
+    File.write!(Path.join(output_path, "config/config.exs"), """
     use Mix.Config
     config :magic_auth, ui_components: MagicAuthWeb.MagicAuthComponents
     """)
 
-    initial_content = File.read!("config/config.exs")
+    initial_content = File.read!(Path.join(output_path, "config/config.exs"))
 
     capture_io(fn ->
       run([])
     end)
 
-    final_content = File.read!("config/config.exs")
+    final_content = File.read!(Path.join(output_path, "config/config.exs"))
 
     assert initial_content == final_content
   end
 
-  test "raises if config file is not found" do
-    File.rm("config/config.exs")
+  test "raises if config file is not found", %{output_path: output_path} do
+    File.rm(Path.join(output_path, "config/config.exs"))
 
-    assert_raise File.Error, "could not read file \"config/config.exs\": no such file or directory", fn ->
+    assert_raise File.Error, ~r/could not read file/, fn ->
       run([])
     end
   end
