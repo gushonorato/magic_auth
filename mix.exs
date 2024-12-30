@@ -7,7 +7,8 @@ defmodule MagicAuth.MixProject do
       version: "0.1.0",
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      aliases: aliases()
     ]
   end
 
@@ -26,7 +27,15 @@ defmodule MagicAuth.MixProject do
       {:phoenix_live_view, "~> 1.0"},
       {:phoenix, "~> 1.7"},
       {:ecto, "~> 3.10"},
-      {:mix_test_watch, "~> 1.2", only: [:dev], runtime: false}
+      {:mix_test_watch, "~> 1.2", only: [:dev], runtime: false},
+      {:esbuild, "~> 0.8.2", only: [:dev], runtime: false}
+    ]
+  end
+
+  defp aliases do
+    [
+      "assets.build": ["esbuild module", "esbuild cdn", "esbuild cdn_min", "esbuild main"],
+      "assets.watch": ["esbuild module --watch"]
     ]
   end
 end
