@@ -2,12 +2,7 @@
   "name": "magic_auth",
   "version": "1.0.0",
   "description": "JS Library for Magic Auth Elixir Library",
-  "module": "./priv/static/magic_auth.esm.js",
-  "main": "./priv/static/magic_auth.cjs.js",
-  "exports": {
-    "import": "./priv/static/magic_auth.esm.js",
-    "require": "./priv/static/magic_auth.cjs.js"
-  },
+  "main": "./priv/static/magic_auth.js",
   "repository": {
     "type": "git",
     "url": "git://github.com/gushonorato/magic_auth.git"

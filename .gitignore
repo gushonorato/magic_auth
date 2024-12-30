@@ -25,5 +25,3 @@ magic_auth-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
-# Ignore the assets directory
-/priv/static
