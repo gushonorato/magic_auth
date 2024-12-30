@@ -2,7 +2,8 @@
   "name": "magic_auth",
   "version": "1.0.0",
   "description": "JS Library for Magic Auth Elixir Library",
-  "main": "./js/magic_auth/index.js",
+  "module": "./priv/static/magic_auth.esm.js",
+  "main": "./priv/static/magic_auth.cjs.js",
   "exports": {
     ".": "./js/magic_auth/index.js"
   },
