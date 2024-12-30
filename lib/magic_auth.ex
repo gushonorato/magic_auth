@@ -3,16 +3,7 @@ defmodule MagicAuth do
   Documentation for `MagicAuth`.
   """
 
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> MagicAuth.hello()
-      :world
-
-  """
-  def hello do
-    :world
+  def otp_length do
+    Application.get_env(:magic_auth, :otp_length, 6)
   end
 end

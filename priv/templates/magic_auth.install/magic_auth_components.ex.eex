@@ -1,6 +1,8 @@
 defmodule <%= @web_module %>.MagicAuthComponents do
   use <%= @web_module %>, :html
 
+  attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the email"
+
   def login_form(assigns) do
     ~H"""
     <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -22,7 +24,12 @@ defmodule <%= @web_module %>.MagicAuthComponents do
         <.form for={@form} phx-change="validate" phx-submit="login" class="mt-8 space-y-6">
           <div class="rounded-md shadow-sm -space-y-px">
             <div>
-              <.input field={@form[:email]} placeholder={gettext("Enter your email")} />
+              <input
+                type="text"
+                name={Phoenix.HTML.Form.input_name(@form, @form[:email].field)}
+                class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-1 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                autocomplete="off"
+              />
             </div>
           </div>
 
@@ -36,6 +43,74 @@ defmodule <%= @web_module %>.MagicAuthComponents do
           </div>
         </.form>
       </div>
+    </div>
+    """
+  end
+
+  attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the OTP code"
+
+  def one_time_password_form(assigns) do
+    ~H"""
+    <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-md w-full space-y-8">
+        <div class="-mt-32">
+          <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            {gettext("Enter verification code")}
+          </h2>
+          <p class="mt-2 text-center text-sm text-gray-600">
+            {gettext("Please enter the %{otp_length}-digit code sent to your email",
+              otp_length: MagicAuth.otp_length()
+            )}
+          </p>
+        </div>
+
+        <.form for={@form} phx-change="validate" phx-submit="verify" class="mt-8 space-y-6">
+          <div class="rounded-md -space-y-px">
+            <div>
+              <.otp_input field={@form[:one_time_password]} />
+            </div>
+          </div>
+
+          <div class="text-center">
+            <p class="text-sm text-gray-600">
+              {gettext("Didn't receive the code?")}
+              <button
+                type="button"
+                phx-click="resend_code"
+                class="ml-1 font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                {gettext("Resend")}
+              </button>
+            </p>
+          </div>
+        </.form>
+      </div>
+    </div>
+    """
+  end
+
+  attr :field, :atom, required: true
+  attr :length, :integer, default: MagicAuth.otp_length()
+  attr :rest, :global
+
+  defp otp_input(assigns) do
+    ~H"""
+    <div
+      class={["flex justify-center space-x-2", @class]}
+      id={"otp-input-#{Phoenix.HTML.Form.input_name(@field.form, @field.field)}"}
+      phx-hook="OTPInput"
+    >
+      <%%= for _i <- 1..@length do %>
+        <input
+          type="text"
+          name={Phoenix.HTML.Form.input_name(@field.form, @field.field) <> "[]"}
+          maxlength="1"
+          class="w-12 h-12 text-center text-2xl border rounded-md focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+          autocomplete="off"
+          inputmode="numeric"
+          {@rest}
+        />
+      <%% end %>
     </div>
     """
   end

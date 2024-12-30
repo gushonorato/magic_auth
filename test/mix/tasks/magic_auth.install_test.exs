@@ -64,7 +64,10 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     content = File.read!(components_file)
     assert content =~ "defmodule MagicAuthWeb.MagicAuthComponents"
-    assert content =~ "use Phoenix.Component"
+    assert content =~ "use MagicAuthWeb, :html"
+    assert content =~ "def login_form(assigns) do"
+    assert content =~ "def one_time_password_form(assigns) do"
+    assert content =~ "defp otp_input(assigns) do"
   end
 
   test "injects configuration into config.exs", %{output_path: output_path} do
