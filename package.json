@@ -1,12 +1,6 @@
 {
   "name": "magic_auth",
-  "version": "1.0.0",
-  "description": "JS Library for Magic Auth Elixir Library",
-  "main": "./priv/static/magic_auth.js",
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/gushonorato/magic_auth.git"
-  },
-  "author": "Gustavo Honorato <gustavo@gmail.com>",
-  "license": "MIT"
+  "version": "0.1.0",
+  "main": "./priv/static/index.js",
+  "repository": {}
 }
