@@ -15,7 +15,7 @@ defmodule <%= @web_module %>.MagicAuthComponents do
             {gettext("Sign in to your account")}
           </h2>
           <p class="mt-2 text-center text-sm text-gray-600">
-            {gettext("Enter your email to receive a access code")}
+            {gettext("Enter your email to receive an access code")}
           </p>
         </div>
 
