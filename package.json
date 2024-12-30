@@ -5,7 +5,8 @@
   "module": "./priv/static/magic_auth.esm.js",
   "main": "./priv/static/magic_auth.cjs.js",
   "exports": {
-    ".": "./js/magic_auth/index.js"
+    "import": "./priv/static/magic_auth.esm.js",
+    "require": "./priv/static/magic_auth.cjs.js"
   },
   "repository": {
     "type": "git",
