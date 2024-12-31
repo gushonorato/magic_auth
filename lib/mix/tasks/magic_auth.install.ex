@@ -10,13 +10,21 @@ defmodule Mix.Tasks.MagicAuth.Install do
     Application.get_env(:magic_auth, :install_task_output_path, "")
   end
 
+  def repo_path do
+    :magic_auth
+    |> Application.fetch_env!(:repo)
+    |> Module.split()
+    |> List.last()
+    |> Macro.underscore()
+  end
+
   def run(args) do
     args
     |> build_assigns()
     |> install()
   end
 
-  defp build_assigns(_args) do
+  def build_assigns(_args) do
     %{
       app_name: Mix.Phoenix.otp_app(),
       base_module: Mix.Phoenix.base(),
@@ -38,12 +46,14 @@ defmodule Mix.Tasks.MagicAuth.Install do
     """)
   end
 
-  defp install_magic_token_migration_file(assigns) do
+  def install_magic_token_migration_file(assigns) do
     copy_template(
       "#{@template_dir}/create_magic_auth_tokens.exs.eex",
       Path.join([
         base_output_path(),
-        "priv/repo/migrations/#{generate_migration_timestamp()}_create_magic_auth_tokens.exs"
+        "priv",
+        repo_path(),
+        "migrations/#{generate_migration_timestamp()}_create_magic_auth_tokens.exs"
       ]),
       assigns
     )
