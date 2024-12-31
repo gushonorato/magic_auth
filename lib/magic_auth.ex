@@ -3,7 +3,7 @@ defmodule MagicAuth do
   Documentation for `MagicAuth`.
   """
 
-  def otp_length do
-    Application.get_env(:magic_auth, :otp_length, 6)
+  def one_time_password_length do
+    Application.get_env(:magic_auth, :one_time_password_length, 6)
   end
 end

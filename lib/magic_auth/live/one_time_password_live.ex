@@ -13,8 +13,8 @@ defmodule MagicAuth.OneTimePasswordLive do
     |> Changeset.cast(attrs, [:one_time_password])
     |> Changeset.validate_required([:one_time_password])
     |> Changeset.validate_length(:one_time_password,
-      is: MagicAuth.otp_length(),
-      message: "must be #{MagicAuth.otp_length()} digits"
+      is: MagicAuth.one_time_password_length(),
+      message: "must be #{MagicAuth.one_time_password_length()} digits"
     )
   end
 

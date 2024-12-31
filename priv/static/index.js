@@ -1,7 +1,7 @@
-import OTPInputHook from './otp_input_hook';
+import OneTimePasswordInput from './one_time_password_input';
 
-let MagicAuthHooks = {
-  OTPInputHook
+const MagicAuthHooks = {
+  "MagicAuth.OneTimePasswordInput": OneTimePasswordInput
 };
 
 export { MagicAuthHooks };
