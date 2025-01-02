@@ -10,12 +10,15 @@ defmodule Mix.Tasks.MagicAuth.Install do
     Application.get_env(:magic_auth, :install_task_output_path, "")
   end
 
-  def repo_path do
+  def repo_module do
     :magic_auth
     |> Application.fetch_env!(:repo)
     |> Module.split()
     |> List.last()
-    |> Macro.underscore()
+  end
+
+  def repo_path do
+    repo_module() |> Macro.underscore()
   end
 
   def run(args) do
@@ -28,8 +31,10 @@ defmodule Mix.Tasks.MagicAuth.Install do
     %{
       app_name: Mix.Phoenix.otp_app(),
       base_module: Mix.Phoenix.base(),
+      repo_module: repo_module(),
       web_module:
-        Mix.Phoenix.base() |> Mix.Phoenix.web_module() |> Atom.to_string() |> String.replace_prefix("Elixir.", "")
+        Mix.Phoenix.base() |> Mix.Phoenix.web_module() |> Atom.to_string() |> String.replace_prefix("Elixir.", ""),
+      migrations_path: Path.join([:code.priv_dir(Mix.Phoenix.otp_app()), repo_path(), "migrations"])
     }
   end
 
@@ -48,12 +53,12 @@ defmodule Mix.Tasks.MagicAuth.Install do
 
   def install_magic_token_migration_file(assigns) do
     copy_template(
-      "#{@template_dir}/create_magic_auth_tokens.exs.eex",
+      "#{@template_dir}/create_magic_auth_one_time_passwords.exs.eex",
       Path.join([
         base_output_path(),
         "priv",
         repo_path(),
-        "migrations/#{generate_migration_timestamp()}_create_magic_auth_tokens.exs"
+        "migrations/#{generate_migration_timestamp()}_create_magic_auth_one_time_passwords.exs"
       ]),
       assigns
     )

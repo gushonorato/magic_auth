@@ -2,7 +2,7 @@ defmodule MagicAuthTest do
   use MagicAuth.DataCase, async: true
   doctest MagicAuth, except: [generate_one_time_password: 1]
 
-  alias MagicAuth.Token
+  alias MagicAuth.OneTimePassword
 
   describe "one_time_password_length/0" do
     test "returns default value when not configured" do
@@ -33,34 +33,34 @@ defmodule MagicAuthTest do
   describe "generate_one_time_password/1" do
     test "generates valid one-time password with valid email" do
       email = "user@example.com"
-      {:ok, token} = MagicAuth.generate_one_time_password(%{"email" => email, "value" => "123456"})
+      {:ok, token} = MagicAuth.generate_one_time_password(%{"email" => email})
 
       assert token.email == email
-      assert String.length(token.value) > 0
+      assert String.length(token.hashed_password) > 0
     end
 
     test "returns error with invalid email" do
-      {:error, changeset} = MagicAuth.generate_one_time_password(%{"email" => "invalid_email", "value" => "123456"})
+      {:error, changeset} = MagicAuth.generate_one_time_password(%{"email" => "invalid_email"})
       assert "has invalid format" in errors_on(changeset).email
     end
 
     test "removes existing tokens before creating a new one" do
       email = "user@example.com"
-      {:ok, _token1} = MagicAuth.generate_one_time_password(%{"email" => email, "value" => "123456"})
-      {:ok, token2} = MagicAuth.generate_one_time_password(%{"email" => email, "value" => "654321"})
+      {:ok, _token1} = MagicAuth.generate_one_time_password(%{"email" => email})
+      {:ok, token2} = MagicAuth.generate_one_time_password(%{"email" => email})
 
-      tokens = MagicAuth.TestRepo.all(Token)
+      tokens = MagicAuth.TestRepo.all(OneTimePassword)
       assert length(tokens) == 1
       assert List.first(tokens).id == token2.id
     end
 
     test "stores token value as bcrypt hash" do
-      {:ok, token} = MagicAuth.generate_one_time_password(%{"email" => "user@example.com", "value" => "123456test"})
+      {:ok, token} = MagicAuth.generate_one_time_password(%{"email" => "user@example.com"})
 
-      # Verify value starts with "$2b$" which is the bcrypt hash identifier
-      assert String.starts_with?(token.value, "$2b$")
-      # Verify hash length is correct (60 characters)
-      assert String.length(token.value) == 60
+      # Verify hashed_password starts with "$2b$" which is the bcrypt hash identifier
+      assert String.starts_with?(token.hashed_password, "$2b$")
+      # Verify hashed_password length is correct (60 characters)
+      assert String.length(token.hashed_password) == 60
     end
   end
 end

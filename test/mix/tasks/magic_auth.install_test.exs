@@ -4,7 +4,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
   import Mix.Tasks.MagicAuth.Install
   import ExUnit.CaptureIO
 
-  def output_path, do: "test/mix/tasks/magic_auth_install_test_output_files"
+  def output_path, do: Application.fetch_env!(:magic_auth, :install_task_output_path)
 
   setup do
     File.mkdir_p!(Path.join(output_path(), "config"))
@@ -30,13 +30,13 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert File.dir?(Path.join(output_path(), "priv/test_repo/migrations"))
 
     [migration_file] =
-      Path.wildcard(Path.join(output_path(), "priv/test_repo/migrations/*_create_magic_auth_tokens.exs"))
+      Path.wildcard(Path.join(output_path(), "priv/test_repo/migrations/*_create_magic_auth_one_time_passwords.exs"))
 
     assert File.exists?(migration_file)
 
     content = File.read!(migration_file)
-    assert content =~ "defmodule Repo.Migrations.CreateMagicAuthTokens"
-    assert content =~ "create table(:magic_auth_tokens)"
+    assert content =~ "defmodule MagicAuth.TestRepo.Migrations.CreateMagicAuthOneTimePasswords"
+    assert content =~ "create table(:magic_auth_one_time_passwords)"
 
     assert output =~ "Magic Auth installed successfully!"
   end
