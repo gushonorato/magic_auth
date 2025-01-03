@@ -3,12 +3,12 @@ export default {
     const inputs = this.el.querySelectorAll('input');
 
     inputs.forEach((input, index) => {
-      // Selecionar texto ao focar
+      // Select text on focus
       input.addEventListener('focus', (e) => {
         e.target.select();
       });
 
-      // Permitir apenas números e navegação
+      // Allow only numbers and navigation
       input.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft' && index > 0) {
           e.preventDefault();
@@ -31,14 +31,14 @@ export default {
         if (value.length > 0) {
           input.value = value[value.length - 1].replace(/[^0-9]/g, '');
 
-          // Mover para o próximo input
+          // Move to next input
           if (index < inputs.length - 1) {
             inputs[index + 1].focus();
           }
         }
       });
 
-      // Lidar com paste
+      // Handle paste
       input.addEventListener('paste', (e) => {
         e.preventDefault();
         const pastedData = e.clipboardData.getData('text');
@@ -49,6 +49,12 @@ export default {
             input.value = numbers[i];
           }
         });
+
+        // Move cursor to last input on paste
+        inputs[inputs.length - 1].focus();
+
+        // Call LiveView to verify this code
+        this.pushEvent('verify', { auth: { password: numbers } }, (reply, ref) => { })
       });
     });
   }
