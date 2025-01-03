@@ -149,7 +149,7 @@ defmodule <%= @web_module %>.MagicAuth do
     <div
       class={"flex justify-center space-x-2"}
       id={"one-time-password-input-#{Phoenix.HTML.Form.input_id(@field.form, @field.field)}"}
-      phx-hook="MagicAuth.OneTimePasswordInput"
+      phx-hook="MagicAuth.SessionInput"
     >
       <%%= for _i <- 1..MagicAuth.Config.one_time_password_length() do %>
         <input
@@ -173,9 +173,9 @@ defmodule <%= @web_module %>.MagicAuth do
 #  ## Parameters
 #
 #    * `code` - The one-time password code generated to be sent via email
-#    * `one_time_password` - The `OneTimePassword` struct containing the user's email
+#    * `session` - The `Session` struct containing the user's email
   @impl true
-  def on_one_time_password_generated(code, %MagicAuth.OneTimePassword{email: email}) do
+  def on_one_time_password_requested(code, %MagicAuth.Session{email: email}) do
     Swoosh.Email.new()
     |> Swoosh.Email.to(email)
     |> Swoosh.Email.from({"Sender name", "noreply@example.com"})

@@ -33,13 +33,13 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert File.dir?(Path.join(output_path(), "priv/test_repo/migrations"))
 
     [migration_file] =
-      Path.wildcard(Path.join(output_path(), "priv/test_repo/migrations/*_create_magic_auth_one_time_passwords.exs"))
+      Path.wildcard(Path.join(output_path(), "priv/test_repo/migrations/*_create_magic_auth_sessions.exs"))
 
     assert File.exists?(migration_file)
 
     content = File.read!(migration_file)
-    assert content =~ "defmodule MagicAuth.TestRepo.Migrations.CreateMagicAuthOneTimePasswords"
-    assert content =~ "create table(:magic_auth_one_time_passwords)"
+    assert content =~ "defmodule MagicAuth.TestRepo.Migrations.CreateMagicAuthSessions"
+    assert content =~ "create table(:magic_auth_sessions)"
 
     assert output =~ "Magic Auth installed successfully!"
   end

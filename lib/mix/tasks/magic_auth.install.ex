@@ -50,12 +50,12 @@ defmodule Mix.Tasks.MagicAuth.Install do
 
   def install_magic_token_migration_file(assigns) do
     copy_template(
-      "#{@template_dir}/create_magic_auth_one_time_passwords.exs.eex",
+      "#{@template_dir}/create_magic_auth_sessions.exs.eex",
       Path.join([
         base_output_path(),
         "priv",
         repo_path(),
-        "migrations/#{generate_migration_timestamp()}_create_magic_auth_one_time_passwords.exs"
+        "migrations/#{generate_migration_timestamp()}_create_magic_auth_sessions.exs"
       ]),
       assigns
     )

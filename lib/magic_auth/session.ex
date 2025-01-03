@@ -1,16 +1,17 @@
-defmodule MagicAuth.OneTimePassword do
+defmodule MagicAuth.Session do
   use Ecto.Schema
   import Ecto.Changeset
 
-  schema "magic_auth_one_time_passwords" do
-    field(:email, :string)
-    field(:hashed_password, :string, redact: true)
+  schema "magic_auth_sessions" do
+    field :email, :string
+    field :hashed_password, :string, redact: true
+    field :authenticated?, :boolean, default: false, source: :authenticated
 
     timestamps(updated_at: false)
   end
 
-  def changeset(one_time_password, attrs) do
-    one_time_password
+  def changeset(session, attrs) do
+    session
     |> cast(attrs, [:email])
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/)

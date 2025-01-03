@@ -5,14 +5,19 @@ defmodule MagicAuth do
 
   import Ecto.Query
   alias Ecto.Multi
-  alias MagicAuth.OneTimePassword
+  alias MagicAuth.Session
 
   @doc """
-  Generates a one-time password for a given email.
+  Creates an unauthenticated session and generates a one-time password for a given email.
 
   The one-time password is stored in the database to allow users to log in from a device that
   doesn't have access to the email where the code was sent. For example, the user
   can receive the code on their phone and use it to log in on their computer.
+
+  When called, this function creates a new unauthenticated session record and generates
+  a one-time password that will be used to authenticate it. The password is then passed
+  to the configured callback module `on_one_time_password_requested/2` which should handle
+  sending it to the user via email.
 
   ## Parameters
 
@@ -20,45 +25,50 @@ defmodule MagicAuth do
 
   ## Returns
 
-    * `{:ok, one_time_password}` - Returns the created one-time password on success
+    * `{:ok, session}` - Returns the created unauthenticated session on success
     * `{:error, changeset}` - Returns the changeset with errors if validation fails
     * `{:error, failed_value}` - Returns the failed value if the transaction fails
 
   ## Examples
 
-      iex> MagicAuth.generate_one_time_password(%{"email" => "user@example.com"})
-      {:ok, %MagicAuth.OneTimePassword{}}
+      iex> MagicAuth.create_unauthenticated_session(%{"email" => "user@example.com"})
+      {:ok, %MagicAuth.Session{authenticated: false}}
 
   The one time password length can be configured in config/config.exs:
 
-      config :magic_auth,
-        one_time_password_length: 6 # default value
+  ```
+  config :magic_auth,
+    one_time_password_length: 6 # default value
+  ```
 
   This function:
-  1. Removes any existing one-time passwords for the provided email
-  2. Generates a new random numeric password
-  3. Encrypts the password using Bcrypt
-  4. Stores the hash in the database
+  1. Removes any existing unauthenticated sessions for the provided email
+  2. Creates a new unauthenticated session
+  3. Generates a new random numeric password
+  4. Encrypts the password using Bcrypt
+  5. Stores the hash in the database
+  6. Calls the configured callback module's `on_one_time_password_requested/2` function
+     which should handle sending the password to the user via email
   """
-  def generate_one_time_password(attrs) do
-    changeset = MagicAuth.OneTimePassword.changeset(%MagicAuth.OneTimePassword{}, attrs)
+  def create_unauthenticated_session(attrs) do
+    changeset = MagicAuth.Session.changeset(%MagicAuth.Session{}, attrs)
 
     if changeset.valid? do
-      code = OneTimePassword.generate_code()
+      code = Session.generate_code()
 
       Multi.new()
       |> Multi.delete_all(
-        :delete_one_time_passwords,
-        from(t in MagicAuth.OneTimePassword, where: t.email == ^changeset.changes.email)
+        :delete_unauthenticated_sessions,
+        from(s in MagicAuth.Session, where: s.email == ^changeset.changes.email and not s.authenticated?)
       )
-      |> Multi.insert(:insert_one_time_password, fn _changes ->
+      |> Multi.insert(:insert_unauthenticated_sessions, fn _changes ->
         Ecto.Changeset.put_change(changeset, :hashed_password, Bcrypt.hash_pwd_salt(code))
       end)
       |> MagicAuth.Config.repo_module().transaction()
       |> case do
-        {:ok, %{insert_one_time_password: one_time_password}} ->
-          MagicAuth.Config.callback_module().on_one_time_password_generated(code, one_time_password)
-          {:ok, one_time_password}
+        {:ok, %{insert_unauthenticated_sessions: session}} ->
+          MagicAuth.Config.callback_module().on_one_time_password_requested(code, session)
+          {:ok, session}
 
         {:error, _failed_operation, failed_value, _changes_so_far} ->
           {:error, failed_value}

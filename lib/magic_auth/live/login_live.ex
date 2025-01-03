@@ -1,21 +1,21 @@
 defmodule MagicAuth.LoginLive do
   use Phoenix.LiveView
 
-  alias MagicAuth.OneTimePassword
+  alias MagicAuth.Session
 
   defp to_auth_form(changeset) do
     to_form(changeset, as: "auth")
   end
 
   def mount(_params, _session, socket) do
-    form = %OneTimePassword{} |> OneTimePassword.changeset(%{}) |> to_auth_form()
+    form = %Session{} |> Session.changeset(%{}) |> to_auth_form()
     {:ok, assign(socket, form: form)}
   end
 
   def handle_event("validate", %{"auth" => attrs}, socket) do
     form =
-      %OneTimePassword{}
-      |> OneTimePassword.changeset(attrs)
+      %Session{}
+      |> Session.changeset(attrs)
       |> Map.put(:action, :validate)
       |> to_auth_form()
 
@@ -23,7 +23,7 @@ defmodule MagicAuth.LoginLive do
   end
 
   def handle_event("login", %{"auth" => attrs}, socket) do
-    case MagicAuth.generate_one_time_password(attrs) do
+    case MagicAuth.create_unauthenticated_session(attrs) do
       {:ok, _} ->
         {:noreply, push_navigate(socket, to: "/sessions/verify")}
 
