@@ -49,6 +49,21 @@ defmodule MagicAuthTest do
       assert List.first(tokens).id == token2.id
     end
 
+    test "does not remove unauthenticated sessions from other emails" do
+      email1 = "user1@example.com"
+      email2 = "user2@example.com"
+
+      {:ok, session1} = MagicAuth.create_unauthenticated_session(%{"email" => email1})
+      {:ok, session2} = MagicAuth.create_unauthenticated_session(%{"email" => email2})
+      {:ok, new_session1} = MagicAuth.create_unauthenticated_session(%{"email" => email1})
+
+      sessions = MagicAuth.TestRepo.all(Session)
+      assert length(sessions) == 2
+      assert Enum.any?(sessions, fn s -> s.id == session2.id end)
+      assert Enum.any?(sessions, fn s -> s.id == new_session1.id end)
+      refute Enum.any?(sessions, fn s -> s.id == session1.id end)
+    end
+
     test "stores token value as bcrypt hash" do
       {:ok, token} = MagicAuth.create_unauthenticated_session(%{"email" => "user@example.com"})
 
@@ -67,6 +82,22 @@ defmodule MagicAuthTest do
       end)
 
       {:ok, _token} = MagicAuth.create_unauthenticated_session(%{"email" => email})
+    end
+
+    test "removes only unauthenticated sessions" do
+      email = "user@example.com"
+
+      {:ok, authenticated_session} = MagicAuth.create_unauthenticated_session(%{"email" => email})
+      authenticated_session = Ecto.Changeset.change(authenticated_session, authenticated?: true)
+      {:ok, authenticated_session} = MagicAuth.TestRepo.update(authenticated_session)
+
+      {:ok, _unauthenticated_session} = MagicAuth.create_unauthenticated_session(%{"email" => email})
+      {:ok, new_session} = MagicAuth.create_unauthenticated_session(%{"email" => email})
+
+      sessions = MagicAuth.TestRepo.all(Session)
+      assert length(sessions) == 2
+      assert Enum.any?(sessions, fn s -> s.id == authenticated_session.id end)
+      assert Enum.any?(sessions, fn s -> s.id == new_session.id end)
     end
   end
 end
