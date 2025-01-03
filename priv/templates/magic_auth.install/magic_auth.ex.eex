@@ -3,8 +3,48 @@ defmodule <%= @web_module %>.MagicAuth do
 
   @behaviour MagicAuth.Callbacks
 
+  @moduledoc """
+  Handles authentication forms and email delivery for the magic link authentication flow.
+
+  This module implements the `MagicAuth.Callbacks` behaviour and provides customizable
+  components that can be tailored to match your application's needs:
+
+  - Login form rendering for email input
+  - One-time password verification form rendering
+  - Email delivery of one-time password codes
+  - HTML and text email templates
+
+  The authentication flow consists of three steps:
+
+  1. User enters their email in the login form
+  2. User receives a one-time password code via email
+  3. User enters the code in the verification form to complete authentication
+
+  ## Customization
+
+  This module is designed to be highly customizable to better fit your application's
+  specific requirements. You can customize:
+
+  - The login form appearance by modifying `login_form/1`
+  - The verification form appearance by modifying `one_time_password_form/1`
+  - Email templates by modifying `text_email_body/1` and `html_email_body/1`
+
+  This flexibility allows you to maintain a consistent look and feel across your
+  application while using the magic one-time password authentication functionality.
+  """
+
   attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the email"
 
+  @doc """
+  Renders the login form displayed at `/sessions/login` where users can enter their email
+  to request a one-time password code.
+
+  This form is the first step in the authentication flow. After submitting a valid email,
+  the user will receive a one-time password code and be redirected to the verification page.
+
+  You can customize this form by editing this function to meet your project's specific needs.
+  """
+  @impl true
   def login_form(assigns) do
     ~H"""
     <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -24,17 +64,7 @@ defmodule <%= @web_module %>.MagicAuth do
         </div>
 
         <.form for={@form} phx-change="validate" phx-submit="login" class="mt-8 space-y-6">
-          <div class="rounded-md shadow-sm -space-y-px">
-            <div>
-              <input
-                type="text"
-                name={Phoenix.HTML.Form.input_name(@form, @form[:email].field)}
-                class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-1 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                autocomplete="off"
-              />
-            </div>
-          </div>
-
+          <.input field={@form[:email]} autocomplete="off" />
           <div>
             <button
               type="submit"
@@ -51,6 +81,16 @@ defmodule <%= @web_module %>.MagicAuth do
 
   attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the One Time Password code"
 
+  @doc """
+  Renders the verification form displayed at `/sessions/verify` where users can enter
+  the one-time password code sent to their email.
+
+  This form is the second step in the authentication flow. After submitting a valid code,
+  the user will be authenticated and redirected to the originally requested page that was stored in the session.
+
+  You can customize this form by editing this function to meet your project's specific needs.
+  """
+  @impl true
   def one_time_password_form(assigns) do
     ~H"""
     <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -91,9 +131,19 @@ defmodule <%= @web_module %>.MagicAuth do
     """
   end
 
-  attr :field, :atom, required: true
-  attr :rest, :global
+  attr :field, :atom, required: true, doc: "the Phoenix.HTML.Form field for the access code"
+  attr :rest, :global, doc: "additional HTML attributes to be passed to the input fields"
 
+#  Renders the input fields for the one-time password code.
+#
+#  Creates a series of individual input fields, one for each digit of the code,
+#  with specific styling and behavior for verification code input.
+#  The fields are connected via JavaScript to allow automatic navigation between them
+#  as the user types.
+#
+#  ## Examples
+#
+#      <.one_time_password_input field={@form[:one_time_password]} />
   defp one_time_password_input(assigns) do
     ~H"""
     <div
@@ -112,6 +162,88 @@ defmodule <%= @web_module %>.MagicAuth do
           {@rest}
         />
       <%% end %>
+    </div>
+    """
+  end
+
+#  Callback called when the user requests a one-time password in `MagicAuth.LoginLive`.
+#
+#  This callback is responsible for sending the access code via email to the user.
+#
+#  ## Parameters
+#
+#    * `code` - The one-time password code generated to be sent via email
+#    * `one_time_password` - The `OneTimePassword` struct containing the user's email
+  @impl true
+  def on_one_time_password_generated(code, %MagicAuth.OneTimePassword{email: email}) do
+    Swoosh.Email.new()
+    |> Swoosh.Email.to(email)
+    |> Swoosh.Email.from({"Sender name", "noreply@example.com"})
+    |> Swoosh.Email.subject("Your access code")
+    |> Swoosh.Email.text_body(text_email_body(code))
+    |> Swoosh.Email.html_body(html_email_body(code))
+    |> MagicAuthExample.Mailer.deliver()
+  end
+
+
+#  Generates the text version of the email body containing the one-time password code.
+#
+#  ## Parameters
+#
+#    * `code` - The one-time password code to be sent to the user
+#
+#  ## Returns
+#
+#  Returns a string containing the text email body with the code and expiration time.
+  defp text_email_body(code) do
+    """
+    Hello!
+
+    Here is your access code: #{code}
+
+    This code expires in #{MagicAuth.Config.one_time_password_expiration()} minutes.
+
+    If you did not request this code, please ignore this email.
+    """
+  end
+
+#  Generates the HTML version of the email body containing the one-time password code.
+#
+#  ## Parameters
+#
+#    * `code` - The one-time password code to be sent to the user
+#
+#  ## Returns
+#
+#  Returns a string containing the HTML email body with styled code and expiration time.
+  defp html_email_body(code) do
+    """
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+      <div style="background-color: #f8f9fa; padding: 30px; border-radius: 10px; text-align: center;">
+        <!-- <img
+          src="/200x133?text=Your+Logo"
+          alt={gettext("Your Company")}
+          style="margin-bottom: 20px;"
+        -->
+
+        <h1 style="color: #4f46e5; margin-bottom: 20px;">Your Access Code</h1>
+
+        <p style="font-size: 16px; color: #374151; margin-bottom: 30px;">
+          Hello! Here is your access code:
+        </p>
+
+        <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px dashed #4f46e5;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #4f46e5;">#{code}</span>
+        </div>
+
+        <p style="font-size: 14px; color: #6b7280; margin-top: 20px;">
+          This code expires in #{MagicAuth.Config.one_time_password_expiration()} minutes.
+        </p>
+
+        <p style="font-size: 12px; color: #9ca3af; margin-top: 30px; font-style: italic;">
+          If you did not request this code, please ignore this email.
+        </p>
+      </div>
     </div>
     """
   end

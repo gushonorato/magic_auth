@@ -1,37 +1,40 @@
 defmodule MagicAuth.LoginLive do
   use Phoenix.LiveView
 
-  alias Ecto.Changeset
+  alias MagicAuth.OneTimePassword
 
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, form: changeset() |> to_form(as: "auth"))}
+  defp to_auth_form(changeset) do
+    to_form(changeset, as: "auth")
   end
 
-  # def handle_event("validate", %{"email" => email}, socket) do
-  #   form =
-  #     %{email: email}
-  #     |> changeset()
-  #     |> Map.put(:action, :validate)
-  #     |> to_form()
+  def mount(_params, _session, socket) do
+    form = %OneTimePassword{} |> OneTimePassword.changeset(%{}) |> to_auth_form()
+    {:ok, assign(socket, form: form)}
+  end
 
-  #   {:noreply, assign(socket, form: form)}
-  # end
+  def handle_event("validate", %{"auth" => attrs}, socket) do
+    form =
+      %OneTimePassword{}
+      |> OneTimePassword.changeset(attrs)
+      |> Map.put(:action, :validate)
+      |> to_auth_form()
 
-  # def handle_event("login", %{"email" => _email}, socket) do
-  #   {:noreply, assign(socket, submitted: true)}
-  # end
+    {:noreply, assign(socket, form: form)}
+  end
 
-  def changeset(attrs \\ %{}) do
-    types = %{email: :string}
+  def handle_event("login", %{"auth" => attrs}, socket) do
+    case MagicAuth.generate_one_time_password(attrs) do
+      {:ok, _} ->
+        {:noreply, push_navigate(socket, to: "/sessions/verify")}
 
-    {%{}, types}
-    |> Changeset.cast(attrs, [:email])
-    |> Changeset.validate_required([:email])
-    |> Changeset.validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must be a valid email")
+      {:error, changeset} ->
+        dbg(changeset)
+        {:noreply, assign(socket, form: to_auth_form(changeset))}
+    end
   end
 
   def login_form(assigns) do
-    module = Application.fetch_env!(:magic_auth, :ui_components)
+    module = MagicAuth.Config.callback_module()
     apply(module, :login_form, [assigns])
   end
 
