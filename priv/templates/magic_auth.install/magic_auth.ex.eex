@@ -61,7 +61,7 @@ defmodule <%= @web_module %>.MagicAuth do
           </h2>
           <p class="mt-2 text-center text-sm text-gray-600">
             {gettext("Please enter the %{one_time_password_length}-digit code sent to your email",
-              one_time_password_length: MagicAuth.one_time_password_length()
+              one_time_password_length: MagicAuth.Config.one_time_password_length()
             )}
           </p>
         </div>
@@ -92,7 +92,6 @@ defmodule <%= @web_module %>.MagicAuth do
   end
 
   attr :field, :atom, required: true
-  attr :length, :integer, default: MagicAuth.one_time_password_length()
   attr :rest, :global
 
   defp one_time_password_input(assigns) do
@@ -102,7 +101,7 @@ defmodule <%= @web_module %>.MagicAuth do
       id={"one-time-password-input-#{Phoenix.HTML.Form.input_id(@field.form, @field.field)}"}
       phx-hook="MagicAuth.OneTimePasswordInput"
     >
-      <%%= for _i <- 1..@length do %>
+      <%%= for _i <- 1..MagicAuth.Config.one_time_password_length() do %>
         <input
           type="text"
           name={Phoenix.HTML.Form.input_name(@field.form, @field.field) <> "[]"}
