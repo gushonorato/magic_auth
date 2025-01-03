@@ -14,18 +14,10 @@ defmodule MagicAuth.OneTimePassword do
     |> cast(attrs, [:email])
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/)
-    |> case do
-      %Ecto.Changeset{valid?: true} = changeset ->
-        put_change(changeset, :hashed_password, generate_one_time_password())
-
-      changeset ->
-        changeset
-    end
   end
 
-  def generate_one_time_password do
+  def generate_code do
     1..MagicAuth.Config.one_time_password_length()
     |> Enum.map_join(fn _ -> Enum.random(0..9) end)
-    |> Bcrypt.hash_pwd_salt()
   end
 end

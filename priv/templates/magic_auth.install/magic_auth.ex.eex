@@ -1,6 +1,8 @@
 defmodule <%= @web_module %>.MagicAuth do
   use <%= @web_module %>, :html
 
+  @behaviour MagicAuth.Callbacks
+
   attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the email"
 
   def login_form(assigns) do

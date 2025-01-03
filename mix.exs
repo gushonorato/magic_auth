@@ -28,7 +28,8 @@ defmodule MagicAuth.MixProject do
       {:ecto_sql, "~> 3.10", only: [:dev, :test]},
       {:postgrex, ">= 0.0.0"},
       {:mix_test_watch, "~> 1.2", only: [:dev], runtime: false},
-      {:bcrypt_elixir, "~> 3.1"}
+      {:bcrypt_elixir, "~> 3.1"},
+      {:mox, "~> 1.0", only: :test}
     ]
   end
 end

@@ -1,9 +1,16 @@
 defmodule MagicAuth.ConfigTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   setup do
     Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
     Application.put_env(:lero_lero_app, :ecto_repos, [MagicAuth.TestRepo])
+
+    on_exit(fn ->
+      Application.delete_env(:magic_auth, :otp_app)
+      Application.delete_env(:lero_lero_app, :ecto_repos)
+    end)
+
+    :ok
   end
 
   describe "one_time_password_length/0" do

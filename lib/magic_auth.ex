@@ -5,6 +5,7 @@ defmodule MagicAuth do
 
   import Ecto.Query
   alias Ecto.Multi
+  alias MagicAuth.OneTimePassword
 
   @doc """
   Generates a one-time password for a given email.
@@ -43,15 +44,20 @@ defmodule MagicAuth do
     changeset = MagicAuth.OneTimePassword.changeset(%MagicAuth.OneTimePassword{}, attrs)
 
     if changeset.valid? do
+      code = OneTimePassword.generate_code()
+
       Multi.new()
       |> Multi.delete_all(
         :delete_one_time_passwords,
         from(t in MagicAuth.OneTimePassword, where: t.email == ^changeset.changes.email)
       )
-      |> Multi.insert(:insert_one_time_password, changeset)
+      |> Multi.insert(:insert_one_time_password, fn _changes ->
+        Ecto.Changeset.put_change(changeset, :hashed_password, Bcrypt.hash_pwd_salt(code))
+      end)
       |> MagicAuth.Config.repo_module().transaction()
       |> case do
         {:ok, %{insert_one_time_password: one_time_password}} ->
+          MagicAuth.Config.callback_module().on_one_time_password_generated(code, one_time_password)
           {:ok, one_time_password}
 
         {:error, _failed_operation, failed_value, _changes_so_far} ->
