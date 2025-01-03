@@ -64,7 +64,7 @@ defmodule <%= @web_module %>.MagicAuth do
         </div>
 
         <.form for={@form} phx-change="validate" phx-submit="login" class="mt-8 space-y-6">
-          <.input field={@form[:email]} autocomplete="off" />
+          <.input field={@form[:email]} autocomplete="off" phx-debounce="500"/>
           <div>
             <button
               type="submit"
@@ -80,6 +80,7 @@ defmodule <%= @web_module %>.MagicAuth do
   end
 
   attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the One Time Password code"
+  attr :email, :string, required: true, doc: "the user's email to which the code was sent"
 
   @doc """
   Renders the verification form displayed at `/sessions/verify` where users can enter
@@ -104,6 +105,7 @@ defmodule <%= @web_module %>.MagicAuth do
               one_time_password_length: MagicAuth.Config.one_time_password_length()
             )}
           </p>
+          <p class="text-center text-sm text-gray-900 font-medium">{@email}</p>
         </div>
 
         <.form for={@form} phx-change="validate" phx-submit="verify" class="mt-8 space-y-6">
@@ -149,7 +151,7 @@ defmodule <%= @web_module %>.MagicAuth do
     <div
       class={"flex justify-center space-x-2"}
       id={"one-time-password-input-#{Phoenix.HTML.Form.input_id(@field.form, @field.field)}"}
-      phx-hook="MagicAuth.SessionInput"
+      phx-hook="MagicAuth.OneTimePasswordInput"
     >
       <%%= for _i <- 1..MagicAuth.Config.one_time_password_length() do %>
         <input
