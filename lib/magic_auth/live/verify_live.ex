@@ -1,4 +1,4 @@
-defmodule MagicAuth.OneTimePasswordLive do
+defmodule MagicAuth.VerifyLive do
   use Phoenix.LiveView
   alias Ecto.Changeset
 
@@ -6,16 +6,8 @@ defmodule MagicAuth.OneTimePasswordLive do
     {:ok, assign(socket, form: changeset() |> to_form(as: "auth"))}
   end
 
-  def changeset(attrs \\ %{}) do
-    types = %{one_time_password: :string}
-
-    {%{}, types}
-    |> Changeset.cast(attrs, [:one_time_password])
-    |> Changeset.validate_required([:one_time_password])
-    |> Changeset.validate_length(:one_time_password,
-      is: MagicAuth.Config.one_time_password_length(),
-      message: "must be #{MagicAuth.Config.one_time_password_length()} digits"
-    )
+  def handle_params(params, _uri, socket) do
+    {:noreply, assign(socket, email: params["email"])}
   end
 
   def handle_event("validate", attrs, socket) do
