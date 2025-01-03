@@ -80,6 +80,7 @@ defmodule <%= @web_module %>.MagicAuth do
   end
 
   attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the One Time Password code"
+  attr :error, :string, required: true, doc: "error message to display if verification fails"
   attr :email, :string, required: true, doc: "the user's email to which the code was sent"
 
   @doc """
@@ -108,10 +109,10 @@ defmodule <%= @web_module %>.MagicAuth do
           <p class="text-center text-sm text-gray-900 font-medium">{@email}</p>
         </div>
 
-        <.form for={@form} phx-change="validate" phx-submit="verify" class="mt-8 space-y-6">
+        <.form for={@form} phx-change="verify" class="mt-8 space-y-6">
           <div class="rounded-md -space-y-px">
             <div>
-              <.one_time_password_input field={@form[:one_time_password]} />
+              <.one_time_password_input field={@form[:password]} error={@error}/>
             </div>
           </div>
 
@@ -134,6 +135,7 @@ defmodule <%= @web_module %>.MagicAuth do
   end
 
   attr :field, :atom, required: true, doc: "the Phoenix.HTML.Form field for the access code"
+  attr :error, :string, required: true, doc: "error message to display if verification fails"
   attr :rest, :global, doc: "additional HTML attributes to be passed to the input fields"
 
 #  Renders the input fields for the one-time password code.
@@ -145,25 +147,28 @@ defmodule <%= @web_module %>.MagicAuth do
 #
 #  ## Examples
 #
-#      <.one_time_password_input field={@form[:one_time_password]} />
+#      <.one_time_password_input field={@form[:password]} />
   defp one_time_password_input(assigns) do
     ~H"""
-    <div
-      class={"flex justify-center space-x-2"}
-      id={"one-time-password-input-#{Phoenix.HTML.Form.input_id(@field.form, @field.field)}"}
-      phx-hook="MagicAuth.OneTimePasswordInput"
-    >
-      <%%= for _i <- 1..MagicAuth.Config.one_time_password_length() do %>
-        <input
-          type="text"
-          name={Phoenix.HTML.Form.input_name(@field.form, @field.field) <> "[]"}
-          maxlength="1"
-          class="w-12 h-12 text-center text-2xl border rounded-md focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-          autocomplete="off"
-          inputmode="numeric"
-          {@rest}
-        />
-      <%% end %>
+    <div class={"flex flex-col items-center space-y-4"}>
+      <div class="flex justify-center space-x-2"
+        id={"one-time-password-input-#{Phoenix.HTML.Form.input_id(@field.form, @field.field)}"}
+        phx-hook="MagicAuth.OneTimePasswordInput"
+        phx-update="ignore"
+      >
+        <%%= for _i <- 1..MagicAuth.Config.one_time_password_length() do %>
+          <input
+            type="text"
+            name={Phoenix.HTML.Form.input_name(@field.form, @field.field) <> "[]"}
+            maxlength="1"
+            class="w-12 h-12 text-center text-2xl border rounded-md focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+            autocomplete="off"
+            inputmode="numeric"
+            {@rest}
+          />
+        <%% end %>
+      </div>
+      <p class="text-sm text-red-600 min-h-6"><%%= @error %></p>
     </div>
     """
   end
