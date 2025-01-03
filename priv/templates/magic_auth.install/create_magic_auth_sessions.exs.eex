@@ -9,7 +9,7 @@ defmodule <%= @repo_module %>.Migrations.CreateMagicAuthSessions do
       add :hashed_password, :string, null: false
       add :authenticated, :boolean, default: false, null: false
 
-      timestamps(updated_at: false)
+      timestamps(updated_at: false, type: :utc_datetime)
     end
 
     create index(:magic_auth_sessions, [:email])

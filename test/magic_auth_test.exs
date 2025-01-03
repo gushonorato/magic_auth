@@ -100,4 +100,127 @@ defmodule MagicAuthTest do
       assert Enum.any?(sessions, fn s -> s.id == new_session.id end)
     end
   end
+
+  describe "verify_password/2" do
+    test "returns ok when password is correct and within expiration time" do
+      email = "test@example.com"
+      # assuming one_time_password_length is 6
+      password = "123456"
+      hashed_password = Bcrypt.hash_pwd_salt(password)
+
+      # Create a valid session
+      session =
+        %Session{
+          email: email,
+          hashed_password: hashed_password,
+          authenticated?: false,
+          inserted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        }
+        |> MagicAuth.Config.repo_module().insert!()
+
+      assert {:ok, returned_session} = MagicAuth.verify_password(email, password)
+      assert returned_session.id == session.id
+    end
+
+    test "returns error when password is expired" do
+      email = "test@example.com"
+      password = "123456"
+      hashed_password = Bcrypt.hash_pwd_salt(password)
+
+      # Create a session with old timestamp
+      expired_time =
+        DateTime.utc_now()
+        # 11 minutes in the past
+        |> DateTime.add(-11, :minute)
+        |> DateTime.truncate(:second)
+
+      %Session{
+        email: email,
+        hashed_password: hashed_password,
+        authenticated?: false,
+        inserted_at: expired_time
+      }
+      |> MagicAuth.Config.repo_module().insert!()
+
+      assert {:error, :code_expired} = MagicAuth.verify_password(email, password)
+    end
+
+    test "returns ok when password is within custom expiration time" do
+      email = "test@example.com"
+      password = "123456"
+      hashed_password = Bcrypt.hash_pwd_salt(password)
+
+      # Configura tempo de expiração para 50 minutos
+      Application.put_env(:magic_auth, :one_time_password_expiration, 50)
+
+      # Cria uma sessão com timestamp de 45 minutos atrás
+      past_time =
+        DateTime.utc_now()
+        |> DateTime.add(-45, :minute)
+        |> DateTime.truncate(:second)
+
+      session =
+        %Session{
+          email: email,
+          hashed_password: hashed_password,
+          authenticated?: false,
+          inserted_at: past_time
+        }
+        |> MagicAuth.Config.repo_module().insert!()
+
+      assert {:ok, returned_session} = MagicAuth.verify_password(email, password)
+      assert returned_session.id == session.id
+
+      # Restaura configuração padrão
+      Application.put_env(:magic_auth, :one_time_password_expiration, 10)
+    end
+
+    test "returns error when password is incorrect" do
+      email = "test@example.com"
+      correct_password = "123456"
+      wrong_password = "654321"
+      hashed_password = Bcrypt.hash_pwd_salt(correct_password)
+
+      # Create a valid session
+      %Session{
+        email: email,
+        hashed_password: hashed_password,
+        authenticated?: false,
+        inserted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+      |> MagicAuth.Config.repo_module().insert!()
+
+      assert {:error, :invalid_code} = MagicAuth.verify_password(email, wrong_password)
+    end
+
+    test "returns error when email does not exist" do
+      assert {:error, :invalid_code} = MagicAuth.verify_password("nonexistent@example.com", "123456")
+    end
+  end
+
+  describe "one_time_password_length/0" do
+    test "verifies default password length of 8 digits" do
+      # Configure password length to 8 digits
+      Application.put_env(:magic_auth, :one_time_password_length, 8)
+
+      email = "test@example.com"
+      password = "12345678"
+      hashed_password = Bcrypt.hash_pwd_salt(password)
+
+      session =
+        %Session{
+          email: email,
+          hashed_password: hashed_password,
+          authenticated?: false,
+          inserted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        }
+        |> MagicAuth.Config.repo_module().insert!()
+
+      assert {:ok, returned_session} = MagicAuth.verify_password(email, password)
+      assert returned_session.id == session.id
+
+      # Restore default configuration
+      Application.put_env(:magic_auth, :one_time_password_length, 6)
+    end
+  end
 end

@@ -7,14 +7,16 @@ defmodule MagicAuth.Session do
     field :hashed_password, :string, redact: true
     field :authenticated?, :boolean, default: false, source: :authenticated
 
-    timestamps(updated_at: false)
+    timestamps(updated_at: false, type: :utc_datetime)
   end
+
+  def email_pattern, do: ~r/^[^\s]+@[^\s]+\.[^\s]+$/
 
   def changeset(session, attrs) do
     session
     |> cast(attrs, [:email])
     |> validate_required([:email])
-    |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/)
+    |> validate_format(:email, email_pattern())
   end
 
   def generate_code do

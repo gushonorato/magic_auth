@@ -77,4 +77,23 @@ defmodule MagicAuth do
       {:error, changeset}
     end
   end
+
+  def verify_password(email, password) do
+    session = MagicAuth.Config.repo_module().get_by(Session, email: email, authenticated?: false)
+
+    cond do
+      is_nil(session) ->
+        Bcrypt.no_user_verify()
+        {:error, :invalid_code}
+
+      DateTime.diff(DateTime.utc_now(), session.inserted_at, :minute) > MagicAuth.Config.one_time_password_expiration() ->
+        {:error, :code_expired}
+
+      Bcrypt.verify_pass(password, session.hashed_password) ->
+        {:ok, session}
+
+      true ->
+        {:error, :invalid_code}
+    end
+  end
 end
