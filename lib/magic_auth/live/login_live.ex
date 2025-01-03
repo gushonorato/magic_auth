@@ -28,8 +28,8 @@ defmodule MagicAuth.LoginLive do
         {:noreply, push_navigate(socket, to: "/sessions/verify")}
 
       {:error, changeset} ->
-        dbg(changeset)
-        {:noreply, assign(socket, form: to_auth_form(changeset))}
+        form = changeset |> Map.put(:action, :login) |> to_auth_form()
+        {:noreply, assign(socket, form: form)}
     end
   end
 
