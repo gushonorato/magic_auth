@@ -6,18 +6,6 @@ defmodule MagicAuth do
   import Ecto.Query
   alias Ecto.Multi
 
-  def one_time_password_length do
-    Application.get_env(:magic_auth, :one_time_password_length, 6)
-  end
-
-  def one_time_password_expiration do
-    Application.get_env(:magic_auth, :one_time_password_expiration, 10)
-  end
-
-  defp repo do
-    Application.fetch_env!(:magic_auth, :repo)
-  end
-
   @doc """
   Generates a one-time password for a given email.
 
@@ -61,7 +49,7 @@ defmodule MagicAuth do
         from(t in MagicAuth.OneTimePassword, where: t.email == ^changeset.changes.email)
       )
       |> Multi.insert(:insert_one_time_password, changeset)
-      |> repo().transaction()
+      |> MagicAuth.Config.repo_module().transaction()
       |> case do
         {:ok, %{insert_one_time_password: one_time_password}} ->
           {:ok, one_time_password}

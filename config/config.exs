@@ -9,8 +9,7 @@ end
 
 if config_env() == :test do
   config :magic_auth,
-    install_task_output_path: install_task_output_path,
-    repo: MagicAuth.TestRepo
+    install_task_output_path: install_task_output_path
 
   config :logger, level: :warning
 end

@@ -6,9 +6,6 @@ Application.put_env(:magic_auth, MagicAuth.TestRepo,
   pool: Ecto.Adapters.SQL.Sandbox
 )
 
-Application.put_env(:magic_auth, :ecto_repos, [MagicAuth.TestRepo])
-Application.put_env(:magic_auth, :repo, MagicAuth.TestRepo)
-
 defmodule MagicAuth.TestRepo do
   use Ecto.Repo,
     otp_app: :magic_auth,

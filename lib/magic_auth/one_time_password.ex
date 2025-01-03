@@ -24,7 +24,7 @@ defmodule MagicAuth.OneTimePassword do
   end
 
   def generate_one_time_password do
-    1..MagicAuth.one_time_password_length()
+    1..MagicAuth.Config.one_time_password_length()
     |> Enum.map_join(fn _ -> Enum.random(0..9) end)
     |> Bcrypt.hash_pwd_salt()
   end

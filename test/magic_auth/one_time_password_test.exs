@@ -1,5 +1,5 @@
 defmodule MagicAuth.OneTimePasswordTest do
-  use MagicAuth.DataCase, async: true
+  use MagicAuth.DataCase
   alias MagicAuth.OneTimePassword
 
   describe "changeset/2" do

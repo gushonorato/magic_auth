@@ -7,6 +7,9 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
   def output_path, do: Application.fetch_env!(:magic_auth, :install_task_output_path)
 
   setup do
+    Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
+    Application.put_env(:lero_lero_app, :ecto_repos, [MagicAuth.TestRepo])
+
     File.mkdir_p!(Path.join(output_path(), "config"))
     File.mkdir_p!(Path.join(output_path(), "config"))
 
@@ -55,12 +58,12 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       run([])
     end)
 
-    components_file = Path.join(output_path(), "lib/magic_auth_web/components/magic_auth_components.ex")
+    components_file = Path.join(output_path(), "lib/magic_auth_web/components/magic_auth.ex")
 
     assert File.exists?(components_file)
 
     content = File.read!(components_file)
-    assert content =~ "defmodule MagicAuthWeb.MagicAuthComponents"
+    assert content =~ "defmodule MagicAuthWeb.MagicAuth"
     assert content =~ "use MagicAuthWeb, :html"
     assert content =~ "def login_form(assigns) do"
     assert content =~ "def one_time_password_form(assigns) do"
@@ -74,7 +77,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     config_content = File.read!(Path.join(output_path(), "config/config.exs"))
 
-    assert config_content =~ "config :magic_auth, ui_components: MagicAuthWeb.MagicAuthComponents"
+    assert config_content =~ "config :magic_auth, otp_app: :magic_auth"
   end
 
   test "doesn't duplicate configuration if already present" do
@@ -82,7 +85,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     File.write!(Path.join(output_path(), "config/config.exs"), """
     use Mix.Config
-    config :magic_auth, ui_components: MagicAuthWeb.MagicAuthComponents
+    config :magic_auth, otp_app: :magic_auth
     """)
 
     initial_content = File.read!(Path.join(output_path(), "config/config.exs"))

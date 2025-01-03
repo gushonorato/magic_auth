@@ -1,33 +1,13 @@
 defmodule MagicAuthTest do
   use MagicAuth.DataCase, async: true
+
   doctest MagicAuth, except: [generate_one_time_password: 1]
 
   alias MagicAuth.OneTimePassword
 
-  describe "one_time_password_length/0" do
-    test "returns default value when not configured" do
-      Application.delete_env(:magic_auth, :one_time_password_length)
-      assert MagicAuth.one_time_password_length() == 6
-    end
-
-    test "returns configured value" do
-      Application.put_env(:magic_auth, :one_time_password_length, 8)
-      assert MagicAuth.one_time_password_length() == 8
-      Application.delete_env(:magic_auth, :one_time_password_length)
-    end
-  end
-
-  describe "one_time_password_expiration/0" do
-    test "returns default value when not configured" do
-      Application.delete_env(:magic_auth, :one_time_password_expiration)
-      assert MagicAuth.one_time_password_expiration() == 10
-    end
-
-    test "returns configured value" do
-      Application.put_env(:magic_auth, :one_time_password_expiration, 15)
-      assert MagicAuth.one_time_password_expiration() == 15
-      Application.delete_env(:magic_auth, :one_time_password_expiration)
-    end
+  setup do
+    Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
+    Application.put_env(:lero_lero_app, :ecto_repos, [MagicAuth.TestRepo])
   end
 
   describe "generate_one_time_password/1" do

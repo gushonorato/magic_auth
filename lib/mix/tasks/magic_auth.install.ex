@@ -10,15 +10,14 @@ defmodule Mix.Tasks.MagicAuth.Install do
     Application.get_env(:magic_auth, :install_task_output_path, "")
   end
 
-  def repo_module do
-    :magic_auth
-    |> Application.fetch_env!(:repo)
+  def repo_name do
+    MagicAuth.Config.repo_module()
     |> Module.split()
     |> List.last()
   end
 
   def repo_path do
-    repo_module() |> Macro.underscore()
+    repo_name() |> Macro.underscore()
   end
 
   def run(args) do
@@ -31,7 +30,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
     %{
       app_name: Mix.Phoenix.otp_app(),
       base_module: Mix.Phoenix.base(),
-      repo_module: repo_module(),
+      repo_module: repo_name(),
       web_module:
         Mix.Phoenix.base() |> Mix.Phoenix.web_module() |> Atom.to_string() |> String.replace_prefix("Elixir.", ""),
       migrations_path: Path.join([:code.priv_dir(Mix.Phoenix.otp_app()), repo_path(), "migrations"])
@@ -40,7 +39,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
 
   defp install(assigns) do
     install_magic_token_migration_file(assigns)
-    install_magic_auth_components(assigns)
+    install_magic_auth_callbacks(assigns)
 
     Mix.shell().info("""
 
@@ -71,12 +70,12 @@ defmodule Mix.Tasks.MagicAuth.Install do
     |> String.replace(["-", ":", " "], "")
   end
 
-  defp install_magic_auth_components(assigns) do
+  defp install_magic_auth_callbacks(assigns) do
     components_dir = Path.join([base_output_path(), "lib/#{assigns.app_name}_web/components"])
 
     copy_template(
-      "#{@template_dir}/magic_auth_components.ex.eex",
-      "#{components_dir}/magic_auth_components.ex",
+      "#{@template_dir}/magic_auth.ex.eex",
+      "#{components_dir}/magic_auth.ex",
       assigns
     )
 
@@ -88,7 +87,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
     unless String.match?(config_content, ~r/config :magic_auth\b/) do
       File.write!(
         config_file,
-        config_content <> "\n\nconfig :magic_auth, ui_components: #{assigns.web_module}.MagicAuthComponents"
+        config_content <> "\n\nconfig :magic_auth, otp_app: :#{assigns.app_name}"
       )
     end
   end

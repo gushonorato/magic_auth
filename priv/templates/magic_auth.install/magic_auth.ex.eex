@@ -1,4 +1,4 @@
-defmodule <%= @web_module %>.MagicAuthComponents do
+defmodule <%= @web_module %>.MagicAuth do
   use <%= @web_module %>, :html
 
   attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the email"
