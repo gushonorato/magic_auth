@@ -11,8 +11,8 @@ defmodule Mix.Tasks.MagicAuth.Install do
   end
 
   def repo_name do
-    MagicAuth.Config.repo_module()
-    |> Module.split()
+    MagicAuth.Config.repo_module_name()
+    |> String.split(".")
     |> List.last()
   end
 
@@ -21,8 +21,6 @@ defmodule Mix.Tasks.MagicAuth.Install do
   end
 
   def run(args) do
-    Application.put_env(:magic_auth, :otp_app, Mix.Phoenix.otp_app())
-
     args
     |> build_assigns()
     |> install()
@@ -30,11 +28,9 @@ defmodule Mix.Tasks.MagicAuth.Install do
 
   def build_assigns(_args) do
     %{
-      app_name: Mix.Phoenix.otp_app(),
-      base_module: Mix.Phoenix.base(),
-      repo_module: repo_name(),
-      web_module:
-        Mix.Phoenix.base() |> Mix.Phoenix.web_module() |> Atom.to_string() |> String.replace_prefix("Elixir.", ""),
+      app_name: MagicAuth.Config.otp_app(),
+      repo_module: MagicAuth.Config.repo_module_name(),
+      web_module: MagicAuth.Config.web_module_name(),
       migrations_path: Path.join(["priv", repo_path(), "migrations"])
     }
   end
@@ -73,7 +69,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
   end
 
   defp install_magic_auth_callbacks(assigns) do
-    components_dir = Path.join([base_output_path(), "lib/#{assigns.app_name}_web/components"])
+    components_dir = Path.join([base_output_path(), "lib/#{assigns.app_name}_web"])
 
     copy_template(
       "#{@template_dir}/magic_auth.ex.eex",

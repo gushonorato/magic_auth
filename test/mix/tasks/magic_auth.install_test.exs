@@ -7,8 +7,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
   def output_path, do: Application.fetch_env!(:magic_auth, :install_task_output_path)
 
   setup do
-    Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
-    Application.put_env(:lero_lero_app, :ecto_repos, [MagicAuth.TestRepo])
+    Application.put_env(:magic_auth, :ecto_repos, [MagicAuth.TestRepo])
 
     File.mkdir_p!(Path.join(output_path(), "config"))
     File.mkdir_p!(Path.join(output_path(), "config"))
@@ -19,6 +18,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     on_exit(fn ->
       File.rm_rf!(output_path())
+      Application.delete_env(:magic_auth, :ecto_repos)
     end)
 
     :ok
@@ -47,18 +47,18 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
   test "run/1 executes installation" do
     output =
       capture_io(fn ->
-        Mix.Tasks.MagicAuth.Install.run([])
+        run([])
       end)
 
     assert output =~ "Magic Auth installed successfully!"
   end
 
-  test "creates magic auth components file" do
+  test "creates magic auth callbacks file" do
     capture_io(fn ->
       run([])
     end)
 
-    components_file = Path.join(output_path(), "lib/magic_auth_web/components/magic_auth.ex")
+    components_file = Path.join(output_path(), "lib/magic_auth_web/magic_auth.ex")
 
     assert File.exists?(components_file)
 

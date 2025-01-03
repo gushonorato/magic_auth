@@ -31,6 +31,11 @@ defmodule MagicAuth.ConfigTest do
       Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
       assert MagicAuth.Config.otp_app() == :lero_lero_app
     end
+
+    test "returns app from Mix config if is not set" do
+      Application.delete_env(:magic_auth, :otp_app)
+      assert MagicAuth.Config.otp_app() == :magic_auth
+    end
   end
 
   describe "otp_app_module/0" do
@@ -40,15 +45,15 @@ defmodule MagicAuth.ConfigTest do
     end
   end
 
-  describe "web_module/0" do
+  describe "web_module_name/0" do
     test "returns the Web module when otp_app doesn't end with Web" do
       Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
-      assert MagicAuth.Config.web_module() == LeroLeroAppWeb
+      assert MagicAuth.Config.web_module() === LeroLeroAppWeb
     end
 
     test "returns the module directly when it already ends with Web" do
       Application.put_env(:magic_auth, :otp_app, :lero_lero_app_web)
-      assert MagicAuth.Config.web_module() == LeroLeroAppWeb
+      assert MagicAuth.Config.web_module() === LeroLeroAppWeb
     end
   end
 
@@ -67,6 +72,16 @@ defmodule MagicAuth.ConfigTest do
       assert MagicAuth.Config.repo_module() == MagicAuth.TestRepo2
 
       Application.delete_env(:lero_lero_app, :ecto_repos)
+    end
+  end
+
+  describe "repo_module_name/0" do
+    test "returns the repository module name as string without Elixir prefix" do
+      Application.put_env(:magic_auth, :repo, MyApp.Repo)
+
+      assert MagicAuth.Config.repo_module_name() == "MyApp.Repo"
+
+      Application.delete_env(:magic_auth, :repo)
     end
   end
 

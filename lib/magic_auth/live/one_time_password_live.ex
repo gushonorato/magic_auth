@@ -19,17 +19,15 @@ defmodule MagicAuth.OneTimePasswordLive do
   end
 
   def handle_event("validate", attrs, socket) do
-    dbg(attrs)
     {:noreply, socket |> assign(form: changeset(attrs) |> to_form(as: "auth"))}
   end
 
   def handle_event("verify", attrs, socket) do
-    dbg(attrs)
     {:noreply, socket |> assign(form: changeset(attrs) |> to_form(as: "auth"))}
   end
 
   def one_time_password_form(assigns) do
-    module = Application.fetch_env!(:magic_auth, :ui_components)
+    module = MagicAuth.Config.callback_module()
     apply(module, :one_time_password_form, [assigns])
   end
 
