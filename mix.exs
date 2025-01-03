@@ -25,6 +25,7 @@ defmodule MagicAuth.MixProject do
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
       {:phoenix_live_view, "~> 1.0"},
       {:phoenix, "~> 1.7"},
+      {:ecto, "~> 3.10"},
       {:ecto_sql, "~> 3.10", only: [:dev, :test]},
       {:postgrex, ">= 0.0.0"},
       {:mix_test_watch, "~> 1.2", only: [:dev], runtime: false},

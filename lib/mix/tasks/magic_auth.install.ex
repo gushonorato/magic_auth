@@ -21,6 +21,8 @@ defmodule Mix.Tasks.MagicAuth.Install do
   end
 
   def run(args) do
+    Application.put_env(:magic_auth, :otp_app, Mix.Phoenix.otp_app())
+
     args
     |> build_assigns()
     |> install()
@@ -33,7 +35,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
       repo_module: repo_name(),
       web_module:
         Mix.Phoenix.base() |> Mix.Phoenix.web_module() |> Atom.to_string() |> String.replace_prefix("Elixir.", ""),
-      migrations_path: Path.join([:code.priv_dir(Mix.Phoenix.otp_app()), repo_path(), "migrations"])
+      migrations_path: Path.join(["priv", repo_path(), "migrations"])
     }
   end
 
