@@ -26,7 +26,7 @@ defmodule <%= @web_module %>.MagicAuth do
   specific requirements. You can customize:
 
   - The login form appearance by modifying `login_form/1`
-  - The verification form appearance by modifying `one_time_password_form/1`
+  - The verification form appearance by modifying `verify_form/1`
   - Email templates by modifying `text_email_body/1` and `html_email_body/1`
 
   This flexibility allows you to maintain a consistent look and feel across your
@@ -91,7 +91,7 @@ defmodule <%= @web_module %>.MagicAuth do
   You can customize this form by editing this function to meet your project's specific needs.
   """
   @impl true
-  def one_time_password_form(assigns) do
+  def verify_form(assigns) do
     ~H"""
     <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-md w-full space-y-8">

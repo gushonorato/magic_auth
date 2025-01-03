@@ -66,7 +66,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert content =~ "defmodule MagicAuthWeb.MagicAuth"
     assert content =~ "use MagicAuthWeb, :html"
     assert content =~ "def login_form(assigns) do"
-    assert content =~ "def one_time_password_form(assigns) do"
+    assert content =~ "def verify_form(assigns) do"
     assert content =~ "defp one_time_password_input(assigns) do"
   end
 

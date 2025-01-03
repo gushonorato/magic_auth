@@ -28,14 +28,14 @@ defmodule MagicAuth.VerifyLive do
     |> Changeset.validate_format(:code, ~r/^[0-9]+$/, message: "deve conter apenas números")
   end
 
-  def one_time_password_form(assigns) do
+  def verify_form(assigns) do
     module = MagicAuth.Config.callback_module()
-    apply(module, :one_time_password_form, [assigns])
+    apply(module, :verify_form, [assigns])
   end
 
   def render(assigns) do
     ~H"""
-    <.one_time_password_form form={@form} />
+    <.verify_form form={@form} />
     """
   end
 end
