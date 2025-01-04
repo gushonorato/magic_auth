@@ -25,8 +25,8 @@ defmodule MagicAuth.LoginLive do
   def handle_event("login", %{"auth" => attrs}, socket) do
     case MagicAuth.create_unauthenticated_session(attrs) do
       {:ok, session} ->
-        query = URI.encode_query(%{email: session.email})
-        {:noreply, push_navigate(socket, to: "/sessions/verify?#{query}")}
+        path = MagicAuth.Config.router().__magic_auth__(:password, %{email: session.email})
+        {:noreply, push_navigate(socket, to: path)}
 
       {:error, changeset} ->
         form = changeset |> Map.put(:action, :login) |> to_auth_form()

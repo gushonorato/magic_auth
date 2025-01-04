@@ -1,4 +1,4 @@
-defmodule MagicAuth.VerifyLive do
+defmodule MagicAuth.PasswordLive do
   use Phoenix.LiveView
   alias MagicAuth.Session
 
@@ -9,9 +9,12 @@ defmodule MagicAuth.VerifyLive do
   defp to_password_form(password), do: to_form(%{"password" => password}, as: "auth")
 
   def handle_params(params, _uri, socket) do
+    dbg(params)
+
     case parse_email(params) do
       nil ->
-        {:noreply, push_navigate(socket, to: "/sessions/login")}
+        redirect_to = MagicAuth.Config.router().__magic_auth__(:login)
+        {:noreply, push_navigate(socket, to: redirect_to)}
 
       email ->
         {:noreply, assign(socket, email: email, error: parse_error(params))}
@@ -44,8 +47,8 @@ defmodule MagicAuth.VerifyLive do
           {:noreply, assign(socket, error: "Code expired", password: to_password_form(nil))}
 
         {:ok, _session} ->
-          query = URI.encode_query(%{email: email})
-          {:noreply, push_navigate(socket, to: "/sessions/verify?#{query}")}
+          redirect_to = MagicAuth.Config.router().__magic_auth__(:password, %{email: email})
+          {:noreply, push_navigate(socket, to: redirect_to)}
       end
     else
       {:noreply, assign(socket, form: to_password_form(password), error: nil)}

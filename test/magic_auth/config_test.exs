@@ -110,4 +110,17 @@ defmodule MagicAuth.ConfigTest do
       Application.delete_env(:magic_auth, :one_time_password_expiration)
     end
   end
+
+  describe "router/0" do
+    test "returns the configured router when explicitly set" do
+      Application.put_env(:magic_auth, :router, LeroLeroAppWeb.CustomRouter)
+      assert MagicAuth.Config.router() == LeroLeroAppWeb.CustomRouter
+      Application.delete_env(:magic_auth, :router)
+    end
+
+    test "returns default router based on web_module when not configured" do
+      Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
+      assert MagicAuth.Config.router() == LeroLeroAppWeb.Router
+    end
+  end
 end

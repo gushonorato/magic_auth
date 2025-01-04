@@ -50,4 +50,8 @@ defmodule MagicAuth.Config do
         module
     end
   end
+
+  def router() do
+    Application.get_env(:magic_auth, :router) || Module.concat([web_module_name(), "Router"])
+  end
 end
