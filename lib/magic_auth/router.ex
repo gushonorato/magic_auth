@@ -30,6 +30,21 @@ defmodule MagicAuth.Router do
   - `/sessions/password` - Password page
 
   For more information about path customization, see the `magic_auth/2` macro.
+
+  ## Introspection Functions
+
+  The following functions are used internally to generate and manage authentication routes:
+
+  - `__magic_auth__(:scope)` - Returns the configured base path
+  - `__magic_auth__(:login, query)` - Returns the login path with optional query parameters
+  - `__magic_auth__(:password, query)` - Returns the password path with optional query parameters
+
+  The `query` parameter is an optional map that allows adding query parameters to the generated URLs.
+
+  ### Example
+
+    __magic_auth__(:login, %{foo: "bar", foo: "bar"})
+    # Returns: "/sessions/login?foo=bar
   """
   defmacro __using__(_opts) do
     quote do
