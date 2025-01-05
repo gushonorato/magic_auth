@@ -4,20 +4,32 @@ defmodule <%= @repo_module %>.Migrations.CreateMagicAuthOneTimePasswords do
   def up do
     execute "CREATE EXTENSION IF NOT EXISTS citext"
 
-    create table(:magic_auth_one_time_passwords) do
+    create table(:magic_auth_sessions) do
       add :email, :citext, null: false
       add :token, :binary, null: false
+
+      timestamps(type: :utc_datetime)
+    end
+
+    create index(:magic_auth_sessions, [:email])
+    create unique_index(:magic_auth_sessions, [:token])
+
+    create table(:magic_auth_one_time_passwords) do
+      add :email, :citext, null: false
+      add :hashed_password, :string, null: false
 
       timestamps(updated_at: false, type: :utc_datetime)
     end
 
-    create index(:magic_auth_one_time_passwords, [:email])
-    create unique_index(:magic_auth_one_time_passwords, [:token])
+    create unique_index(:magic_auth_one_time_passwords, [:email])
   end
 
   def down do
-    drop index(:magic_auth_one_time_passwords, [:email])
-    drop unique_index(:magic_auth_one_time_passwords, [:token])
+    drop index(:magic_auth_sessions, [:email])
+    drop unique_index(:magic_auth_sessions, [:token])
+    drop table(:magic_auth_sessions)
+
+    drop unique_index(:magic_auth_one_time_passwords, [:email])
     drop table(:magic_auth_one_time_passwords)
 
     execute "DROP EXTENSION IF EXISTS citext"
