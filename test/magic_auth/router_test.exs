@@ -36,7 +36,7 @@ defmodule MagicAuth.RouterTest do
       plug :put_secure_browser_headers
     end
 
-    magic_auth("/auth", login: "/entrar", password: "/senha", verify: "/verificar")
+    magic_auth("/auth", login: "/entrar", password: "/senha", verify: "/verificar", signed_in: "/seguro")
   end
 
   describe "default routes" do
@@ -53,6 +53,7 @@ defmodule MagicAuth.RouterTest do
       assert TestRouter.__magic_auth__(:login, %{}) == "/sessions/login"
       assert TestRouter.__magic_auth__(:password, %{}) == "/sessions/password"
       assert TestRouter.__magic_auth__(:verify, %{}) == "/sessions/verify"
+      assert TestRouter.__magic_auth__(:signed_in, %{}) == "/"
     end
 
     test "generates URLs with query parameters" do
@@ -66,6 +67,9 @@ defmodule MagicAuth.RouterTest do
 
       assert TestRouter.__magic_auth__(:verify, params) |> URI.decode() ==
                "/sessions/verify?foo=bar&email=test@example.com"
+
+      assert TestRouter.__magic_auth__(:signed_in, params) |> URI.decode() ==
+               "/?foo=bar&email=test@example.com"
     end
   end
 
@@ -80,9 +84,10 @@ defmodule MagicAuth.RouterTest do
 
     test "generates introspection functions with custom paths" do
       assert CustomRouter.__magic_auth__(:scope) == "/auth"
-      assert CustomRouter.__magic_auth__(:login, %{}) == "/auth/entrar"
-      assert CustomRouter.__magic_auth__(:password, %{}) == "/auth/senha"
-      assert CustomRouter.__magic_auth__(:verify, %{}) == "/auth/verificar"
+      assert CustomRouter.__magic_auth__(:login) == "/auth/entrar"
+      assert CustomRouter.__magic_auth__(:password) == "/auth/senha"
+      assert CustomRouter.__magic_auth__(:verify) == "/auth/verificar"
+      assert CustomRouter.__magic_auth__(:signed_in) == "/seguro"
     end
 
     test "generates custom URLs with query parameters" do
@@ -96,6 +101,9 @@ defmodule MagicAuth.RouterTest do
 
       assert CustomRouter.__magic_auth__(:verify, params) |> URI.decode() ==
                "/auth/verificar?foo=bar&email=test@example.com"
+
+      assert CustomRouter.__magic_auth__(:signed_in, params) |> URI.decode() ==
+               "/seguro?foo=bar&email=test@example.com"
     end
   end
 

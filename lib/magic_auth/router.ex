@@ -28,6 +28,7 @@ defmodule MagicAuth.Router do
 
   - `/sessions/login` - Login page
   - `/sessions/password` - Password page
+  - `/sessions/verify` - Verify controller
 
   For more information about path customization, see the `magic_auth/2` macro.
 
@@ -38,6 +39,8 @@ defmodule MagicAuth.Router do
   - `__magic_auth__(:scope)` - Returns the configured base path
   - `__magic_auth__(:login, query)` - Returns the login path with optional query parameters
   - `__magic_auth__(:password, query)` - Returns the password path with optional query parameters
+  - `__magic_auth__(:verify, query)` - Returns the verify path with optional query parameters
+  - `__magic_auth__(:signed_in, query)` - Returns the signed in path with optional query parameters
 
   The `query` parameter is an optional map that allows adding query parameters to the generated URLs.
 
@@ -62,6 +65,7 @@ defmodule MagicAuth.Router do
       * `:login` - Path for login page. Default: "/login"
       * `:password` - Path for password page. Default: "/password"
       * `:verify` - Path for verify controller. Default: "/verify"
+      * `:signed_in` - Path for signed in page. Default: "/"
 
   ## Example
 
@@ -83,8 +87,9 @@ defmodule MagicAuth.Router do
     login = Keyword.get(opts, :login, "/login")
     password = Keyword.get(opts, :password, "/password")
     verify = Keyword.get(opts, :verify, "/verify")
+    signed_in = Keyword.get(opts, :signed_in, "/")
 
-    quote bind_quoted: [scope: scope, login: login, password: password, verify: verify] do
+    quote bind_quoted: [scope: scope, login: login, password: password, verify: verify, signed_in: signed_in] do
       def __magic_auth__(:scope), do: unquote(scope)
 
       def __magic_auth__(path, query \\ %{})
@@ -100,6 +105,8 @@ defmodule MagicAuth.Router do
       def __magic_auth__(:verify, query) do
         concat_query(__magic_auth__(:scope) <> unquote(verify), query)
       end
+
+      def __magic_auth__(:signed_in, query), do: concat_query(unquote(signed_in), query)
 
       defp concat_query(path, query) when query == %{}, do: path
       defp concat_query(path, query), do: path <> "?" <> URI.encode_query(query)
