@@ -21,6 +21,7 @@ defmodule MagicAuth.Session do
 
   def generate_code do
     1..MagicAuth.Config.one_time_password_length()
-    |> Enum.map_join(fn _ -> Enum.random(0..9) end)
+    |> Enum.map(fn _ -> :crypto.strong_rand_bytes(1) |> :binary.decode_unsigned() |> rem(10) end)
+    |> Enum.join("")
   end
 end
