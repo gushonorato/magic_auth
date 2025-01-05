@@ -1,11 +1,3 @@
-Application.put_env(:magic_auth, MagicAuth.TestRepo,
-  username: "postgres",
-  password: "postgres",
-  database: "magic_auth_test",
-  hostname: "localhost",
-  pool: Ecto.Adapters.SQL.Sandbox
-)
-
 defmodule MagicAuth.TestRepo do
   use Ecto.Repo,
     otp_app: :magic_auth,

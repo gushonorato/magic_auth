@@ -1,5 +1,3 @@
-Path.wildcard("test/support/**/*.ex") |> Enum.each(&Code.require_file/1)
-
 Mox.defmock(MagicAuth.CallbacksMock, for: MagicAuth.Callbacks)
 
 ExUnit.start()
