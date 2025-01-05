@@ -61,6 +61,7 @@ defmodule MagicAuth.Router do
     * `opts` - List of options to customize paths:
       * `:login` - Path for login page. Default: "/login"
       * `:password` - Path for password page. Default: "/password"
+      * `:verify` - Path for verify controller. Default: "/verify"
 
   ## Example
 
@@ -69,19 +70,21 @@ defmodule MagicAuth.Router do
       # Generates:
       # /sessions/login
       # /sessions/password
+      # /sessions/verify
 
       # Custom configuration
-      magic_auth("/auth", login: "/entrar", password: "/senha")
+      magic_auth("/auth", login: "/entrar", password: "/senha", verify: "/verificar")
       # Generates:
       # /auth/entrar
       # /auth/senha
-
+      # /auth/verificar
   """
   defmacro magic_auth(scope \\ "/sessions", opts \\ []) do
     login = Keyword.get(opts, :login, "/login")
     password = Keyword.get(opts, :password, "/password")
+    verify = Keyword.get(opts, :verify, "/verify")
 
-    quote bind_quoted: [scope: scope, login: login, password: password] do
+    quote bind_quoted: [scope: scope, login: login, password: password, verify: verify] do
       def __magic_auth__(:scope), do: unquote(scope)
 
       def __magic_auth__(path, query \\ %{})
@@ -94,6 +97,10 @@ defmodule MagicAuth.Router do
         concat_query(__magic_auth__(:scope) <> unquote(password), query)
       end
 
+      def __magic_auth__(:verify, query) do
+        concat_query(__magic_auth__(:scope) <> unquote(verify), query)
+      end
+
       defp concat_query(path, query) when query == %{}, do: path
       defp concat_query(path, query), do: path <> "?" <> URI.encode_query(query)
 
@@ -102,6 +109,7 @@ defmodule MagicAuth.Router do
 
         live login, LoginLive, :magic_auth_login
         live password, PasswordLive, :magic_auth_password
+        get verify, VerifyController, :verify
       end
     end
   end

@@ -9,8 +9,6 @@ defmodule MagicAuth.PasswordLive do
   defp to_password_form(password), do: to_form(%{"password" => password}, as: "auth")
 
   def handle_params(params, _uri, socket) do
-    dbg(params)
-
     case parse_email(params) do
       nil ->
         redirect_to = MagicAuth.Config.router().__magic_auth__(:login)
@@ -39,17 +37,8 @@ defmodule MagicAuth.PasswordLive do
     %{email: email} = socket.assigns
 
     if String.length(password_str) == MagicAuth.Config.one_time_password_length() do
-      case MagicAuth.verify_password(email, password_str) do
-        {:error, :invalid_code} ->
-          {:noreply, assign(socket, error: "Invalid code", password: to_password_form(nil))}
-
-        {:error, :code_expired} ->
-          {:noreply, assign(socket, error: "Code expired", password: to_password_form(nil))}
-
-        {:ok, _session} ->
-          redirect_to = MagicAuth.Config.router().__magic_auth__(:password, %{email: email})
-          {:noreply, push_navigate(socket, to: redirect_to)}
-      end
+      redirect_to = MagicAuth.Config.router().__magic_auth__(:verify, %{email: email, code: password_str})
+      {:noreply, redirect(socket, to: redirect_to)}
     else
       {:noreply, assign(socket, form: to_password_form(password), error: nil)}
     end
