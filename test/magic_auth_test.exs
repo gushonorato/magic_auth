@@ -3,11 +3,11 @@ defmodule MagicAuthTest do
 
   import Mox
 
-  alias MagicAuth.Session
+  alias MagicAuth.OneTimePassword
 
   setup :verify_on_exit!
 
-  doctest MagicAuth, except: [create_unauthenticated_session: 1]
+  doctest MagicAuth, except: [create_one_time_password: 1]
 
   setup do
     Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
@@ -25,47 +25,47 @@ defmodule MagicAuthTest do
     :ok
   end
 
-  describe "create_unauthenticated_session/1" do
+  describe "create_one_time_password/1" do
     test "generates valid one-time password with valid email" do
       email = "user@example.com"
-      {:ok, token} = MagicAuth.create_unauthenticated_session(%{"email" => email})
+      {:ok, token} = MagicAuth.create_one_time_password(%{"email" => email})
 
       assert token.email == email
       assert String.length(token.hashed_password) > 0
     end
 
     test "returns error with invalid email" do
-      {:error, changeset} = MagicAuth.create_unauthenticated_session(%{"email" => "invalid_email"})
+      {:error, changeset} = MagicAuth.create_one_time_password(%{"email" => "invalid_email"})
       assert "has invalid format" in errors_on(changeset).email
     end
 
     test "removes existing tokens before creating a new one" do
       email = "user@example.com"
-      {:ok, _token1} = MagicAuth.create_unauthenticated_session(%{"email" => email})
-      {:ok, token2} = MagicAuth.create_unauthenticated_session(%{"email" => email})
+      {:ok, _token1} = MagicAuth.create_one_time_password(%{"email" => email})
+      {:ok, token2} = MagicAuth.create_one_time_password(%{"email" => email})
 
-      tokens = MagicAuth.TestRepo.all(Session)
+      tokens = MagicAuth.TestRepo.all(OneTimePassword)
       assert length(tokens) == 1
       assert List.first(tokens).id == token2.id
     end
 
-    test "does not remove unauthenticated sessions from other emails" do
+    test "does not remove one-time passwords from other emails" do
       email1 = "user1@example.com"
       email2 = "user2@example.com"
 
-      {:ok, session1} = MagicAuth.create_unauthenticated_session(%{"email" => email1})
-      {:ok, session2} = MagicAuth.create_unauthenticated_session(%{"email" => email2})
-      {:ok, new_session1} = MagicAuth.create_unauthenticated_session(%{"email" => email1})
+      {:ok, one_time_password1} = MagicAuth.create_one_time_password(%{"email" => email1})
+      {:ok, one_time_password2} = MagicAuth.create_one_time_password(%{"email" => email2})
+      {:ok, new_one_time_password1} = MagicAuth.create_one_time_password(%{"email" => email1})
 
-      sessions = MagicAuth.TestRepo.all(Session)
-      assert length(sessions) == 2
-      assert Enum.any?(sessions, fn s -> s.id == session2.id end)
-      assert Enum.any?(sessions, fn s -> s.id == new_session1.id end)
-      refute Enum.any?(sessions, fn s -> s.id == session1.id end)
+      one_time_passwords = MagicAuth.TestRepo.all(OneTimePassword)
+      assert length(one_time_passwords) == 2
+      assert Enum.any?(one_time_passwords, fn s -> s.id == one_time_password2.id end)
+      assert Enum.any?(one_time_passwords, fn s -> s.id == new_one_time_password1.id end)
+      refute Enum.any?(one_time_passwords, fn s -> s.id == one_time_password1.id end)
     end
 
     test "stores token value as bcrypt hash" do
-      {:ok, token} = MagicAuth.create_unauthenticated_session(%{"email" => "user@example.com"})
+      {:ok, token} = MagicAuth.create_one_time_password(%{"email" => "user@example.com"})
 
       # Verify hashed_password starts with "$2b$" which is the bcrypt hash identifier
       assert String.starts_with?(token.hashed_password, "$2b$")
@@ -81,23 +81,7 @@ defmodule MagicAuthTest do
         :ok
       end)
 
-      {:ok, _token} = MagicAuth.create_unauthenticated_session(%{"email" => email})
-    end
-
-    test "removes only unauthenticated sessions" do
-      email = "user@example.com"
-
-      {:ok, authenticated_session} = MagicAuth.create_unauthenticated_session(%{"email" => email})
-      authenticated_session = Ecto.Changeset.change(authenticated_session, authenticated?: true)
-      {:ok, authenticated_session} = MagicAuth.TestRepo.update(authenticated_session)
-
-      {:ok, _unauthenticated_session} = MagicAuth.create_unauthenticated_session(%{"email" => email})
-      {:ok, new_session} = MagicAuth.create_unauthenticated_session(%{"email" => email})
-
-      sessions = MagicAuth.TestRepo.all(Session)
-      assert length(sessions) == 2
-      assert Enum.any?(sessions, fn s -> s.id == authenticated_session.id end)
-      assert Enum.any?(sessions, fn s -> s.id == new_session.id end)
+      {:ok, _token} = MagicAuth.create_one_time_password(%{"email" => email})
     end
   end
 
@@ -108,18 +92,17 @@ defmodule MagicAuthTest do
       password = "123456"
       hashed_password = Bcrypt.hash_pwd_salt(password)
 
-      # Create a valid session
-      session =
-        %Session{
+      # Create a valid one_time_password
+      one_time_password =
+        %OneTimePassword{
           email: email,
           hashed_password: hashed_password,
-          authenticated?: false,
           inserted_at: DateTime.utc_now() |> DateTime.truncate(:second)
         }
         |> MagicAuth.Config.repo_module().insert!()
 
-      assert {:ok, returned_session} = MagicAuth.verify_password(email, password)
-      assert returned_session.id == session.id
+      assert {:ok, returned_one_time_password} = MagicAuth.verify_password(email, password)
+      assert returned_one_time_password.id == one_time_password.id
     end
 
     test "returns error when password is expired" do
@@ -127,17 +110,16 @@ defmodule MagicAuthTest do
       password = "123456"
       hashed_password = Bcrypt.hash_pwd_salt(password)
 
-      # Create a session with old timestamp
+      # Create a one_time_password with old timestamp
       expired_time =
         DateTime.utc_now()
         # 11 minutes in the past
         |> DateTime.add(-11, :minute)
         |> DateTime.truncate(:second)
 
-      %Session{
+      %OneTimePassword{
         email: email,
         hashed_password: hashed_password,
-        authenticated?: false,
         inserted_at: expired_time
       }
       |> MagicAuth.Config.repo_module().insert!()
@@ -159,17 +141,16 @@ defmodule MagicAuthTest do
         |> DateTime.add(-45, :minute)
         |> DateTime.truncate(:second)
 
-      session =
-        %Session{
+      one_time_password =
+        %OneTimePassword{
           email: email,
           hashed_password: hashed_password,
-          authenticated?: false,
           inserted_at: past_time
         }
         |> MagicAuth.Config.repo_module().insert!()
 
-      assert {:ok, returned_session} = MagicAuth.verify_password(email, password)
-      assert returned_session.id == session.id
+      assert {:ok, returned_one_time_password} = MagicAuth.verify_password(email, password)
+      assert returned_one_time_password.id == one_time_password.id
 
       # Restaura configuração padrão
       Application.put_env(:magic_auth, :one_time_password_expiration, 10)
@@ -181,11 +162,10 @@ defmodule MagicAuthTest do
       wrong_password = "654321"
       hashed_password = Bcrypt.hash_pwd_salt(correct_password)
 
-      # Create a valid session
-      %Session{
+      # Create a valid one_time_password
+      %OneTimePassword{
         email: email,
         hashed_password: hashed_password,
-        authenticated?: false,
         inserted_at: DateTime.utc_now() |> DateTime.truncate(:second)
       }
       |> MagicAuth.Config.repo_module().insert!()
@@ -207,17 +187,16 @@ defmodule MagicAuthTest do
       password = "12345678"
       hashed_password = Bcrypt.hash_pwd_salt(password)
 
-      session =
-        %Session{
+      one_time_password =
+        %OneTimePassword{
           email: email,
           hashed_password: hashed_password,
-          authenticated?: false,
           inserted_at: DateTime.utc_now() |> DateTime.truncate(:second)
         }
         |> MagicAuth.Config.repo_module().insert!()
 
-      assert {:ok, returned_session} = MagicAuth.verify_password(email, password)
-      assert returned_session.id == session.id
+      assert {:ok, returned_one_time_password} = MagicAuth.verify_password(email, password)
+      assert returned_one_time_password.id == one_time_password.id
 
       # Restore default configuration
       Application.put_env(:magic_auth, :one_time_password_length, 6)

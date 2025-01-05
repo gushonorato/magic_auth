@@ -2,7 +2,7 @@ defmodule MagicAuth.VerifyController do
   use Phoenix.Controller
   import Plug.Conn
 
-  alias MagicAuth.Session
+  alias MagicAuth.OneTimePassword
 
   def verify(conn, %{"email" => email, "code" => code}) do
     cond do
@@ -19,7 +19,7 @@ defmodule MagicAuth.VerifyController do
     end
   end
 
-  defp valid_email?(email), do: String.match?(email, Session.email_pattern())
+  defp valid_email?(email), do: String.match?(email, OneTimePassword.email_pattern())
   defp valid_code?(code), do: String.length(code) == MagicAuth.Config.one_time_password_length()
 
   defp process_verification(conn, email, code) do
@@ -32,9 +32,8 @@ defmodule MagicAuth.VerifyController do
         redirect_to = MagicAuth.Config.router().__magic_auth__(:password, %{email: email, error: "code_expired"})
         redirect(conn, to: redirect_to)
 
-      {:ok, _session} ->
-        redirect_to = get_session(conn, :redirect_to) || "/"
-        redirect(conn, to: redirect_to)
+      {:ok, _one_time_password} ->
+        redirect(conn, to: "/")
     end
   end
 end

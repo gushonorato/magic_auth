@@ -88,7 +88,7 @@ defmodule <%= @web_module %>.MagicAuth do
   the one-time password code sent to their email.
 
   This form is the second step in the authentication flow. After submitting a valid code,
-  the user will be authenticated and redirected to the originally requested page that was stored in the session.
+  the session will be creatged and redirected to the originally requested page that was stored in the HTTP session.
 
   You can customize this form by editing this function to meet your project's specific needs.
   """
@@ -180,9 +180,9 @@ defmodule <%= @web_module %>.MagicAuth do
 #  ## Parameters
 #
 #    * `code` - The one-time password code generated to be sent via email
-#    * `session` - The `Session` struct containing the user's email
+#    * `one_time_password` - The `OneTimePassword` struct containing the user's email
   @impl true
-  def on_one_time_password_requested(code, %MagicAuth.Session{email: email}) do
+  def on_one_time_password_requested(code, %MagicAuth.OneTimePassword{email: email}) do
     Swoosh.Email.new()
     |> Swoosh.Email.to(email)
     |> Swoosh.Email.from({"Sender name", "noreply@example.com"})

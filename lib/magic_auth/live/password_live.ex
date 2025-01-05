@@ -1,8 +1,8 @@
 defmodule MagicAuth.PasswordLive do
   use Phoenix.LiveView
-  alias MagicAuth.Session
+  alias MagicAuth.OneTimePassword
 
-  def mount(_params, _session, socket) do
+  def mount(_params, _one_time_password, socket) do
     {:ok, assign(socket, form: to_password_form(nil), email: nil, error: nil)}
   end
 
@@ -20,7 +20,7 @@ defmodule MagicAuth.PasswordLive do
   end
 
   defp parse_email(%{"email" => email}) when is_binary(email) and byte_size(email) > 0 do
-    case String.match?(email, Session.email_pattern()) do
+    case String.match?(email, OneTimePassword.email_pattern()) do
       true -> email
       false -> nil
     end
