@@ -1,9 +1,9 @@
 defmodule MagicAuthTest do
-  use MagicAuth.DataCase, async: true
+  use MagicAuth.ConnCase, async: true
 
   import Mox
 
-  alias MagicAuth.OneTimePassword
+  alias MagicAuth.{OneTimePassword, Session}
 
   setup :verify_on_exit!
 
@@ -22,7 +22,18 @@ defmodule MagicAuthTest do
       Application.delete_env(:magic_auth, :callbacks)
     end)
 
-    :ok
+    conn =
+      build_conn()
+      |> Map.put(:secret_key_base, "lero")
+      |> put_private(:phoenix_endpoint, MagicAuthTest.TestEndpoint)
+      |> Plug.Test.init_test_session(%{})
+
+    %{conn: conn}
+  end
+
+  defmodule TestEndpoint do
+    def config(:secret_key_base), do: "lero"
+    def config(:live_view), do: [signing_salt: "outro-lero"]
   end
 
   describe "create_one_time_password/1" do
@@ -200,6 +211,103 @@ defmodule MagicAuthTest do
 
       # Restore default configuration
       Application.put_env(:magic_auth, :one_time_password_length, 6)
+    end
+  end
+
+  describe "log_in/2" do
+    setup do
+      Application.put_env(:magic_auth, :router, MagicAuth.RouterTest.TestRouter)
+
+      on_exit(fn ->
+        Application.delete_env(:magic_auth, :repo)
+      end)
+    end
+
+    test "returns conn", %{conn: conn} do
+      conn = MagicAuth.log_in(conn, "user@example.com")
+      assert %Plug.Conn{} = conn
+    end
+
+    test "stores user token in session", %{conn: conn} do
+      conn = conn |> fetch_session() |> MagicAuth.log_in("user@example.com")
+
+      assert token = get_session(conn, :session_token)
+      assert get_session(conn, :live_socket_id) == "magic_auth_sessions:#{Base.url_encode64(token)}"
+      assert redirected_to(conn) == "/"
+      assert %Session{} = MagicAuth.get_session_by_token(token)
+    end
+
+    test "clears everything previously stored in session", %{conn: conn} do
+      conn = conn |> put_session(:to_be_removed, "value") |> MagicAuth.log_in("user@example.com")
+      refute get_session(conn, :to_be_removed)
+    end
+
+    test "redirects to configured path", %{conn: conn} do
+      conn = conn |> put_session(:session_return_to, "/hello") |> MagicAuth.log_in("user@example.com")
+      assert redirected_to(conn) == "/hello"
+    end
+
+    test "writes a cookie when remember_me is configured", %{conn: conn} do
+      conn = conn |> fetch_cookies() |> MagicAuth.log_in("user@example.com")
+      assert get_session(conn, :session_token) == conn.cookies[MagicAuth.Config.remember_me_cookie()]
+
+      assert %{value: signed_token, max_age: max_age} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
+      assert signed_token != get_session(conn, :session_token)
+      # 60 dias in seconds
+      assert max_age == 5_184_000
+    end
+
+    test "does not write a cookie when remember_me is not configured", %{conn: conn} do
+      Application.put_env(:magic_auth, :remember_me, false)
+      conn = conn |> fetch_cookies() |> MagicAuth.log_in("user@example.com")
+      refute conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
+      Application.put_env(:magic_auth, :remember_me, true)
+    end
+
+    test "changes session validity to 90 days", %{conn: conn} do
+      Application.put_env(:magic_auth, :session_validity_in_days, 90)
+      conn = conn |> fetch_cookies() |> MagicAuth.log_in("user@example.com")
+
+      assert %{max_age: max_age} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
+      # 90 days in seconds
+      assert max_age == 7_776_000
+
+      Application.put_env(:magic_auth, :session_validity_in_days, 60)
+    end
+  end
+
+  describe "get_session_by_token/1" do
+
+
+
+    test "returns the session when token is valid", %{conn: conn} do
+      email = "user@example.com"
+      conn = MagicAuth.log_in(conn, email)
+      token = get_session(conn, :session_token)
+
+      assert session = MagicAuth.get_session_by_token(token)
+      assert session.email == email
+    end
+
+    test "returns nil when token is invalid" do
+      assert MagicAuth.get_session_by_token("invalid_token") == nil
+    end
+
+    test "returns nil when token is expired", %{conn: conn} do
+      email = "user@example.com"
+      conn = MagicAuth.log_in(conn, email)
+      token = get_session(conn, :session_token)
+
+      # Simulate a future date beyond validity period
+      expired_days = -(MagicAuth.Config.session_validity_in_days() + 1)
+      expired_date = DateTime.utc_now() |> DateTime.add(expired_days, :day) |> DateTime.truncate(:second)
+
+      # Update session insertion date
+      session = MagicAuth.get_session_by_token(token)
+      Ecto.Changeset.change(session, inserted_at: expired_date)
+      |> MagicAuth.Config.repo_module().update!()
+
+      assert MagicAuth.get_session_by_token(token) == nil
     end
   end
 end

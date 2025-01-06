@@ -4,8 +4,10 @@ defmodule MagicAuth do
   """
 
   import Ecto.Query
+  import Plug.Conn
+  import Phoenix.Controller
   alias Ecto.Multi
-  alias MagicAuth.OneTimePassword
+  alias MagicAuth.{Session, OneTimePassword}
 
   @doc """
   Creates and sends a one-time password for a given email.
@@ -96,5 +98,83 @@ defmodule MagicAuth do
       true ->
         {:error, :invalid_code}
     end
+  end
+
+  @doc """
+  Logs the session in.
+
+  It renews the session ID and clears the whole session
+  to avoid fixation attacks. See the renew_session
+  function to customize this behaviour.
+
+  It also sets a `:live_socket_id` key in the session,
+  so LiveView sessions are identified and automatically
+  disconnected on log out. The line can be safely removed
+  if you are not using LiveView.
+  """
+  def log_in(conn, email) do
+    token = create_session(email)
+    return_to = get_session(conn, :session_return_to)
+
+    conn
+    |> renew_session()
+    |> put_token_in_session(token)
+    |> maybe_write_remember_me_cookie(token)
+    |> redirect(to: return_to || MagicAuth.Config.router().__magic_auth__(:signed_in))
+  end
+
+  defp create_session(email) do
+    {token, session} = Session.build_session(email)
+    MagicAuth.Config.repo_module().insert!(session)
+    token
+  end
+
+  defp maybe_write_remember_me_cookie(conn, token) do
+    if MagicAuth.Config.remember_me() do
+      put_resp_cookie(conn, MagicAuth.Config.remember_me_cookie(), token, remember_me_options())
+    else
+      conn
+    end
+  end
+
+  def remember_me_options() do
+    [sign: true, max_age: MagicAuth.Config.session_validity_in_days() * 24 * 60 * 60, same_site: "Lax"]
+  end
+
+  # This function renews the session ID and erases the whole
+  # session to avoid fixation attacks. If there is any data
+  # in the session you may want to preserve after log in/log out,
+  # you must explicitly fetch the session data before clearing
+  # and then immediately set it after clearing, for example:
+  #
+  #     defp renew_session(conn) do
+  #       preferred_locale = get_session(conn, :preferred_locale)
+  #
+  #       conn
+  #       |> configure_session(renew: true)
+  #       |> clear_session()
+  #       |> put_session(:preferred_locale, preferred_locale)
+  #     end
+  #
+  defp renew_session(conn) do
+    delete_csrf_token()
+
+    conn
+    |> configure_session(renew: true)
+    |> clear_session()
+  end
+
+  defp put_token_in_session(conn, token) do
+    conn
+    |> put_session(:session_token, token)
+    |> put_session(:live_socket_id, "magic_auth_sessions:#{Base.url_encode64(token)}")
+  end
+
+  @doc """
+  Gets the session with the given token.
+  """
+  def get_session_by_token(token) do
+    {:ok, query} = Session.verify_session_token_query(token, MagicAuth.Config.session_validity_in_days())
+    MagicAuth.Config.repo_module().one(query)
   end
 end

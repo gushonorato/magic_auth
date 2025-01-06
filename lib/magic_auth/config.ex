@@ -54,4 +54,17 @@ defmodule MagicAuth.Config do
   def router() do
     Application.get_env(:magic_auth, :router) || Module.concat([web_module_name(), "Router"])
   end
+
+  def remember_me do
+    Application.get_env(:magic_auth, :remember_me, true)
+  end
+
+  def remember_me_cookie do
+    app_name = otp_app() |> Atom.to_string() |> Macro.underscore()
+    Application.get_env(:magic_auth, :remember_me_cookie, "_#{app_name}_remember_me")
+  end
+
+  def session_validity_in_days do
+    Application.get_env(:magic_auth, :session_validity_in_days, 60)
+  end
 end

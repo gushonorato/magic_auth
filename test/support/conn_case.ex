@@ -26,6 +26,7 @@ defmodule MagicAuth.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import MagicAuth.ConnCase
+      import MagicAuth.DataCase, only: [errors_on: 1]
     end
   end
 
