@@ -19,8 +19,10 @@ defmodule MagicAuth.OneTimePassword do
   end
 
   def generate_code do
-    1..MagicAuth.Config.one_time_password_length()
-    |> Enum.map(fn _ -> :crypto.strong_rand_bytes(1) |> :binary.decode_unsigned() |> rem(10) end)
-    |> Enum.join("")
+    MagicAuth.Config.one_time_password_length()
+    |> :crypto.strong_rand_bytes()
+    |> :binary.bin_to_list()
+    |> Enum.map(&rem(&1, 10))
+    |> Enum.join()
   end
 end
