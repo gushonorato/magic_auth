@@ -16,6 +16,7 @@ defmodule MagicAuthTest do
     Application.put_env(:magic_auth, :callbacks, MagicAuth.CallbacksMock)
 
     Mox.stub(MagicAuth.CallbacksMock, :one_time_password_requested, fn _code, _one_time_password -> :ok end)
+    Mox.stub(MagicAuth.CallbacksMock, :log_in_requested, fn _email -> :allow end)
 
     on_exit(fn ->
       Application.delete_env(:magic_auth, :otp_app)
@@ -271,6 +272,30 @@ defmodule MagicAuthTest do
       assert max_age == 7_776_000
 
       Application.put_env(:magic_auth, :session_validity_in_days, 60)
+    end
+
+    test "redirects to signed_in when log_in_requested returns :allow", %{conn: conn} do
+      email = "user@example.com"
+
+      Mox.expect(MagicAuth.CallbacksMock, :log_in_requested, fn ^email -> :allow end)
+
+      conn = MagicAuth.log_in(conn, email)
+
+      assert redirected_to(conn) == "/"
+      assert get_session(conn, :session_token)
+    end
+
+    test "redirects to log_in when log_in_requested returns :deny", %{conn: conn} do
+      email = "blocked@example.com"
+
+      Mox.expect(MagicAuth.CallbacksMock, :log_in_requested, fn ^email -> :deny end)
+      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :access_denied -> "Access denied" end)
+
+      conn = conn |> fetch_flash() |> MagicAuth.log_in(email)
+
+      assert redirected_to(conn) == MagicAuth.Config.router().__magic_auth__(:log_in)
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Access denied"
+      refute get_session(conn, :session_token)
     end
   end
 

@@ -26,28 +26,28 @@ defmodule MagicAuth.SessionControllerTest do
   end
 
   describe "verify/2" do
-    test "redireciona para login quando email é inválido", %{conn: conn} do
+    test "redirects to login when email is invalid", %{conn: conn} do
       conn =
         get(conn, Router.__magic_auth__(:verify), %{
-          "email" => "email_invalido",
+          "email" => "invalid_email",
           "code" => "123456"
         })
 
       assert redirected_to(conn) == Router.__magic_auth__(:log_in)
     end
 
-    test "redireciona para página de senha quando código é inválido", %{conn: conn, email: email} do
+    test "redirects to password page when code is invalid", %{conn: conn, email: email} do
       conn =
         get(conn, Router.__magic_auth__(:verify), %{
           "email" => email,
-          # código muito curto
+          # code too short
           "code" => "123"
         })
 
       assert redirected_to(conn) =~ Router.__magic_auth__(:password)
     end
 
-    test "redireciona com erro quando código está expirado", %{conn: conn, email: email} do
+    test "redirects with error when code is expired", %{conn: conn, email: email} do
       {:ok, {code, one_time_password}} = MagicAuth.create_one_time_password(%{"email" => email})
 
       one_time_password
@@ -65,7 +65,8 @@ defmodule MagicAuth.SessionControllerTest do
       assert redirected_to(conn) == Router.__magic_auth__(:password, %{email: email, error: :code_expired})
     end
 
-    test "faz login quando código é válido", %{conn: conn, email: email} do
+    test "logs in when code is valid", %{conn: conn, email: email} do
+      Mox.stub(MagicAuth.CallbacksMock, :log_in_requested, fn _email -> :allow end)
       {:ok, {code, _one_time_password}} = MagicAuth.create_one_time_password(%{"email" => email})
 
       conn =

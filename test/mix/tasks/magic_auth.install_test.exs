@@ -68,6 +68,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert content =~ "def log_in_form(assigns) do"
     assert content =~ "def verify_form(assigns) do"
     assert content =~ "defp one_time_password_input(assigns) do"
+    assert content =~ "def log_in_requested(_email), do: :allow"
     assert content =~ "def translate_error(:invalid_code), do: \"Invalid code\""
     assert content =~ "def translate_error(:code_expired), do: \"Code expired\""
     assert content =~ "def translate_error(:unauthorized), do: \"You need to log in to access this page.\""

@@ -252,6 +252,53 @@ defmodule <%= @web_module %>.MagicAuth do
     </div>
     """
   end
+
+  # Callback invoked when a login is requested for an email address.
+  #
+  # It allows you to control which email addresses can access the application by
+  # implementing custom logic to allow or deny access based on the email.
+  #
+  # Called after the user correctly enters the code sent via email
+  # and the system validates that the code is correct and within the expiration period.
+  #
+  # ## Examples
+  #
+  # ```
+  # # Allow only company emails
+  # def log_in_requested(email) do
+  #   if String.ends_with?(email, "@mycompany.com") do
+  #     :allow
+  #   else
+  #     :deny
+  #   end
+  # end
+  #
+  # # Allow only whitelisted emails
+  # def log_in_requested(email) do
+  #   allowed_emails = ["admin@example.com", "user@example.com"]
+  #   if email in allowed_emails, do: :allow, else: :deny
+  # end
+  #
+  # # Allow only users that exist in the database
+  # def log_in_requested(email) do
+  #   case Repo.get_by(User, email: email) do
+  #     nil -> :deny  # User not found in database
+  #     _user -> :allow  # User exists in database
+  #   end
+  # end
+  # ```
+  #
+  # ## Parameters
+  #
+  #   * `email` - The email address requesting log in
+  #
+  # ## Returns
+  #
+  #   * `:allow` - Allow user to access the application
+  #   * `:deny` - Deny the log in request
+  @impl true
+  def log_in_requested(_email), do: :allow
+
   # Translates error messages for the authentication system.
   @impl true
   def translate_error(:invalid_code), do: "Invalid code"

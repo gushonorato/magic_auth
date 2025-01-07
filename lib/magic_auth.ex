@@ -113,14 +113,22 @@ defmodule MagicAuth do
   if you are not using LiveView.
   """
   def log_in(conn, email) do
-    session = create_session!(email)
-    return_to = get_session(conn, :session_return_to)
+    case MagicAuth.Config.callback_module().log_in_requested(email) do
+      :allow ->
+        session = create_session!(email)
+        return_to = get_session(conn, :session_return_to)
 
-    conn
-    |> renew_session()
-    |> put_token_in_session(session.token)
-    |> maybe_write_remember_me_cookie(session.token)
-    |> redirect(to: return_to || MagicAuth.Config.router().__magic_auth__(:signed_in))
+        conn
+        |> renew_session()
+        |> put_token_in_session(session.token)
+        |> maybe_write_remember_me_cookie(session.token)
+        |> redirect(to: return_to || MagicAuth.Config.router().__magic_auth__(:signed_in))
+
+      :deny ->
+        conn
+        |> put_flash(:error, MagicAuth.Config.callback_module().translate_error(:access_denied))
+        |> redirect(to: MagicAuth.Config.router().__magic_auth__(:log_in))
+    end
   end
 
   def create_session!(email) do
