@@ -3,47 +3,45 @@ defmodule <%= @web_module %>.MagicAuth do
 
   @behaviour MagicAuth.Callbacks
 
-  @moduledoc """
-  Handles authentication forms and email delivery for the magic link authentication flow.
-
-  This module implements the `MagicAuth.Callbacks` behaviour and provides customizable
-  components that can be tailored to match your application's needs:
-
-  - Log in form rendering for email input
-  - One-time password verification form rendering
-  - Email delivery of one-time password codes
-  - HTML and text email templates
-
-  The authentication flow consists of three steps:
-
-  1. User enters their email in the log in form
-  2. User receives a one-time password code via email
-  3. User enters the code in the verification form to complete authentication
-
-  ## Customization
-
-  This module is designed to be highly customizable to better fit your application's
-  specific requirements. You can customize:
-
-  - The log in form appearance by modifying `log_in_form/1`
-  - The verification form appearance by modifying `verify_form/1`
-  - Email templates by modifying `text_email_body/1` and `html_email_body/1`
-
-  This flexibility allows you to maintain a consistent look and feel across your
-  application while using the magic one-time password authentication functionality.
-  """
+  # This module implements the `MagicAuth.Callbacks` behaviour and provides customizable
+  # components that can be tailored to match your application's needs:
+  #
+  # - Log in form rendering for email input
+  # - One-time password verification form rendering
+  # - Email delivery of one-time password codes
+  # - HTML and text email templates
+  # - Error message translations
+  # - Email-based access control
+  #
+  # The authentication flow consists of three steps:
+  #
+  # 1. User enters their email in the log in form
+  # 2. User receives a one-time password code via email
+  # 3. User enters the code in the verification form to complete authentication
+  #
+  # ## Customization
+  #
+  # This module is designed to be highly customizable to better fit your application's
+  # specific requirements. You can customize:
+  #
+  # - The log in form appearance by modifying `log_in_form/1`
+  # - The verification form appearance by modifying `verify_form/1`
+  # - Email templates by modifying `one_time_password_requested/2`, `text_email_body/1` and `html_email_body/1`
+  # - Access control logic by modifying `log_in_requested/1`
+  # - Error message translations by modifying `translate_error/1`
+  #
+  # This flexibility allows you to maintain a consistent look and feel across your
+  # application while using the magic one-time password authentication functionality.
 
   attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the email"
 
-  @doc """
-  Renders the log in form displayed at `/sessions/log_in` where users can enter their email
-  to request a one-time password code.
-
-  This form is the first step in the authentication flow. After submitting a valid email,
-  the user will receive a one-time password code and be redirected to the verification page.
-
-  You can customize this form by editing this function to meet your project's specific needs.
-  """
+  # Renders the log in form displayed at `/sessions/log_in` where users can enter their email
+  # to request a one-time password code.
+  #
+  # This form is the first step in the authentication flow. After submitting a valid email,
+  # the user will receive a one-time password code and be redirected to the verification page.
+  #
+  # You can customize this form by editing this function to meet your project's specific needs.
   @impl true
   def log_in_form(assigns) do
     ~H"""
