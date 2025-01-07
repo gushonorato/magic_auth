@@ -24,7 +24,7 @@ defmodule MagicAuth.LoginLive do
 
   def handle_event("login", %{"auth" => attrs}, socket) do
     case MagicAuth.create_one_time_password(attrs) do
-      {:ok, one_time_password} ->
+      {:ok, {_code, one_time_password}} ->
         path = MagicAuth.Config.router().__magic_auth__(:password, %{email: one_time_password.email})
         {:noreply, push_navigate(socket, to: path)}
 

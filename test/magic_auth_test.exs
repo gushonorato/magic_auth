@@ -39,7 +39,7 @@ defmodule MagicAuthTest do
   describe "create_one_time_password/1" do
     test "generates valid one-time password with valid email" do
       email = "user@example.com"
-      {:ok, token} = MagicAuth.create_one_time_password(%{"email" => email})
+      {:ok, {_code, token}} = MagicAuth.create_one_time_password(%{"email" => email})
 
       assert token.email == email
       assert String.length(token.hashed_password) > 0
@@ -52,10 +52,10 @@ defmodule MagicAuthTest do
 
     test "removes existing tokens before creating a new one" do
       email = "user@example.com"
-      {:ok, _token1} = MagicAuth.create_one_time_password(%{"email" => email})
-      {:ok, token2} = MagicAuth.create_one_time_password(%{"email" => email})
+      {:ok, {_code1, _token1}} = MagicAuth.create_one_time_password(%{"email" => email})
+      {:ok, {_code2, token2}} = MagicAuth.create_one_time_password(%{"email" => email})
 
-      tokens = MagicAuth.TestRepo.all(OneTimePassword)
+      tokens = MagicAuthTest.Repo.all(OneTimePassword)
       assert length(tokens) == 1
       assert List.first(tokens).id == token2.id
     end
@@ -64,11 +64,11 @@ defmodule MagicAuthTest do
       email1 = "user1@example.com"
       email2 = "user2@example.com"
 
-      {:ok, one_time_password1} = MagicAuth.create_one_time_password(%{"email" => email1})
-      {:ok, one_time_password2} = MagicAuth.create_one_time_password(%{"email" => email2})
-      {:ok, new_one_time_password1} = MagicAuth.create_one_time_password(%{"email" => email1})
+      {:ok, {_code1, one_time_password1}} = MagicAuth.create_one_time_password(%{"email" => email1})
+      {:ok, {_code2, one_time_password2}} = MagicAuth.create_one_time_password(%{"email" => email2})
+      {:ok, {_code3, new_one_time_password1}} = MagicAuth.create_one_time_password(%{"email" => email1})
 
-      one_time_passwords = MagicAuth.TestRepo.all(OneTimePassword)
+      one_time_passwords = MagicAuthTest.Repo.all(OneTimePassword)
       assert length(one_time_passwords) == 2
       assert Enum.any?(one_time_passwords, fn s -> s.id == one_time_password2.id end)
       assert Enum.any?(one_time_passwords, fn s -> s.id == new_one_time_password1.id end)
@@ -76,7 +76,7 @@ defmodule MagicAuthTest do
     end
 
     test "stores token value as bcrypt hash" do
-      {:ok, token} = MagicAuth.create_one_time_password(%{"email" => "user@example.com"})
+      {:ok, {_code, token}} = MagicAuth.create_one_time_password(%{"email" => "user@example.com"})
 
       # Verify hashed_password starts with "$2b$" which is the bcrypt hash identifier
       assert String.starts_with?(token.hashed_password, "$2b$")
@@ -92,7 +92,7 @@ defmodule MagicAuthTest do
         :ok
       end)
 
-      {:ok, _token} = MagicAuth.create_one_time_password(%{"email" => email})
+      {:ok, {_code, _token}} = MagicAuth.create_one_time_password(%{"email" => email})
     end
   end
 

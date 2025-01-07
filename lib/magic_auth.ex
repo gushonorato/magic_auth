@@ -34,7 +34,7 @@ defmodule MagicAuth do
   ## Examples
 
       iex> MagicAuth.create_one_time_password(%{"email" => "user@example.com"})
-      {:ok, %MagicAuth.OneTimePassword{}}
+      {:ok, {code, %MagicAuth.OneTimePassword{}}}
 
   The one time password length can be configured in config/config.exs:
 
@@ -70,7 +70,7 @@ defmodule MagicAuth do
       |> case do
         {:ok, %{insert_one_time_passwords: one_time_password}} ->
           MagicAuth.Config.callback_module().on_one_time_password_requested(code, one_time_password)
-          {:ok, one_time_password}
+          {:ok, {code, one_time_password}}
 
         {:error, _failed_operation, failed_value, _changes_so_far} ->
           {:error, failed_value}
