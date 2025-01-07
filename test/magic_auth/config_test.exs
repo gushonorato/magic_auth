@@ -163,4 +163,22 @@ defmodule ConfigTest do
       Application.delete_env(:magic_auth, :session_validity_in_days)
     end
   end
+
+  describe "endpoint/0" do
+    test "returns configured endpoint when explicitly set" do
+      Application.put_env(:magic_auth, :endpoint, TestApp.Endpoint)
+
+      assert MagicAuth.Config.endpoint() == TestApp.Endpoint
+
+      Application.delete_env(:magic_auth, :endpoint)
+    end
+
+    test "returns default endpoint based on web_module when not configured" do
+      Application.put_env(:magic_auth, :otp_app, :magic_auth_test)
+
+      assert MagicAuth.Config.endpoint() == MagicAuthTestWeb.Endpoint
+
+      Application.delete_env(:magic_auth, :otp_app)
+    end
+  end
 end

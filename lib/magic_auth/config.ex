@@ -67,4 +67,8 @@ defmodule MagicAuth.Config do
   def session_validity_in_days do
     Application.get_env(:magic_auth, :session_validity_in_days, 60)
   end
+
+  def endpoint() do
+    Application.get_env(:magic_auth, :endpoint) || Module.concat([web_module(), "Endpoint"])
+  end
 end
