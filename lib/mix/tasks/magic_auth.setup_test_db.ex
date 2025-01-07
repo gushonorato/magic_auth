@@ -6,7 +6,7 @@ defmodule Mix.Tasks.MagicAuth.SetupTestDb do
 
     Mix.env(:test)
     Mix.Task.run("loadconfig")
-    Application.put_env(:magic_auth, :ecto_repos, [MagicAuth.TestRepo])
+    Application.put_env(:magic_auth, :ecto_repos, [MagicAuthTest.Repo])
     Code.require_file("test/support/test_repo.ex")
 
     Mix.Tasks.Ecto.Drop.run(["--quiet"])

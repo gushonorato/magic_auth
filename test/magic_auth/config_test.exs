@@ -5,7 +5,7 @@ defmodule ConfigTest do
 
   setup do
     Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
-    Application.put_env(:lero_lero_app, :ecto_repos, [MagicAuth.TestRepo])
+    Application.put_env(:lero_lero_app, :ecto_repos, [MagicAuthTest.Repo])
 
     on_exit(fn ->
       Application.delete_env(:magic_auth, :otp_app)
@@ -61,17 +61,17 @@ defmodule ConfigTest do
 
   describe "repo_module/0" do
     test "returns the configured repo when explicitly defined" do
-      Application.put_env(:magic_auth, :repo, MagicAuth.TestRepo)
+      Application.put_env(:magic_auth, :repo, MagicAuthTest.Repo)
 
-      assert Config.repo_module() == MagicAuth.TestRepo
+      assert Config.repo_module() == MagicAuthTest.Repo
 
       Application.delete_env(:magic_auth, :repo)
     end
 
     test "fetches repo from otp_app when not explicitly configured" do
-      Application.put_env(:lero_lero_app, :ecto_repos, [MagicAuth.TestRepo2])
+      Application.put_env(:lero_lero_app, :ecto_repos, [MagicAuthTest.AnotherRepo])
 
-      assert Config.repo_module() == MagicAuth.TestRepo2
+      assert Config.repo_module() == MagicAuthTest.AnotherRepo
 
       Application.delete_env(:lero_lero_app, :ecto_repos)
     end

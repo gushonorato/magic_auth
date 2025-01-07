@@ -11,12 +11,15 @@ if config_env() == :test do
   config :magic_auth,
     install_task_output_path: install_task_output_path
 
-  config :magic_auth, MagicAuth.TestRepo,
+  config :magic_auth, MagicAuthTest.Repo,
     username: "postgres",
     password: "postgres",
     database: "magic_auth_test",
     hostname: "localhost",
     pool: Ecto.Adapters.SQL.Sandbox
+
+  config :magic_auth, MagicAuthTestWeb.Endpoint,
+    secret_key_base: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
   config :logger, level: :warning
 end

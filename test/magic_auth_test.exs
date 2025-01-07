@@ -10,15 +10,15 @@ defmodule MagicAuthTest do
   doctest MagicAuth, except: [create_one_time_password: 1]
 
   setup do
-    Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
-    Application.put_env(:lero_lero_app, :ecto_repos, [MagicAuth.TestRepo])
+    Application.put_env(:magic_auth, :otp_app, :magic_auth_test)
+    Application.put_env(:magic_auth_test, :ecto_repos, [MagicAuthTest.Repo])
     Application.put_env(:magic_auth, :callbacks, MagicAuth.CallbacksMock)
 
     Mox.stub(MagicAuth.CallbacksMock, :on_one_time_password_requested, fn _code, _one_time_password -> :ok end)
 
     on_exit(fn ->
       Application.delete_env(:magic_auth, :otp_app)
-      Application.delete_env(:lero_lero_app, :ecto_repos)
+      Application.delete_env(:magic_auth_test, :ecto_repos)
       Application.delete_env(:magic_auth, :callbacks)
     end)
 
@@ -216,7 +216,7 @@ defmodule MagicAuthTest do
 
   describe "log_in/2" do
     setup do
-      Application.put_env(:magic_auth, :router, MagicAuth.RouterTest.TestRouter)
+      Application.put_env(:magic_auth, :router, MagicAuthTestWeb.Router)
 
       on_exit(fn ->
         Application.delete_env(:magic_auth, :repo)
@@ -277,9 +277,6 @@ defmodule MagicAuthTest do
   end
 
   describe "get_session_by_token/1" do
-
-
-
     test "returns the session when token is valid", %{conn: conn} do
       email = "user@example.com"
       conn = MagicAuth.log_in(conn, email)
@@ -304,6 +301,7 @@ defmodule MagicAuthTest do
 
       # Update session insertion date
       session = MagicAuth.get_session_by_token(token)
+
       Ecto.Changeset.change(session, inserted_at: expired_date)
       |> MagicAuth.Config.repo_module().update!()
 

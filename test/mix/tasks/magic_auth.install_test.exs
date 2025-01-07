@@ -7,7 +7,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
   def output_path, do: Application.fetch_env!(:magic_auth, :install_task_output_path)
 
   setup do
-    Application.put_env(:magic_auth, :ecto_repos, [MagicAuth.TestRepo])
+    Application.put_env(:magic_auth, :ecto_repos, [MagicAuthTest.Repo])
 
     File.mkdir_p!(Path.join(output_path(), "config"))
     File.mkdir_p!(Path.join(output_path(), "config"))
@@ -30,15 +30,15 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
         run(%{})
       end)
 
-    assert File.dir?(Path.join(output_path(), "priv/test_repo/migrations"))
+    assert File.dir?(Path.join(output_path(), "priv/repo/migrations"))
 
     [migration_file] =
-      Path.wildcard(Path.join(output_path(), "priv/test_repo/migrations/*_create_magic_auth_tables.exs"))
+      Path.wildcard(Path.join(output_path(), "priv/repo/migrations/*_create_magic_auth_tables.exs"))
 
     assert File.exists?(migration_file)
 
     content = File.read!(migration_file)
-    assert content =~ "defmodule MagicAuth.TestRepo.Migrations.CreateMagicAuthOneTimePasswords"
+    assert content =~ "defmodule MagicAuthTest.Repo.Migrations.CreateMagicAuthOneTimePasswords"
     assert content =~ "create table(:magic_auth_one_time_passwords)"
 
     assert output =~ "Magic Auth installed successfully!"
