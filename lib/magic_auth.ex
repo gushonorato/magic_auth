@@ -205,6 +205,25 @@ defmodule MagicAuth do
   end
 
   @doc """
+  Deletes all sessions associated with a given email.
+
+  This function should be called when a user is deleted or has their email changed,
+  to ensure that all their active sessions are terminated.
+
+  ## Parameters
+
+    * `email` - The email of the user whose sessions should be deleted
+
+  ## Examples
+
+      iex> MagicAuth.delete_all_sessions_by_email("user@example.com")
+      {n, nil} # where n is the number of deleted sessions
+  """
+  def delete_all_sessions_by_email(email) do
+    MagicAuth.Config.repo_module().delete_all(from s in Session, where: s.email == ^email)
+  end
+
+  @doc """
   Authenticates the user session by looking into the session
   and remember me token.
   """

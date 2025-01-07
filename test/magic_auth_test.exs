@@ -504,4 +504,25 @@ defmodule MagicAuthTest do
       assert conn.assigns.current_user_session == nil
     end
   end
+
+  describe "delete_all_sessions_by_email/1" do
+    test "deletes all sessions for a given email" do
+      email = "user@example.com"
+
+      session1 = MagicAuth.create_session!(email)
+      session2 = MagicAuth.create_session!(email)
+      other_session = MagicAuth.create_session!("other@example.com")
+
+      assert {2, nil} = MagicAuth.delete_all_sessions_by_email(email)
+
+      assert is_nil(MagicAuth.get_session_by_token(session1.token))
+      assert is_nil(MagicAuth.get_session_by_token(session2.token))
+
+      assert MagicAuth.get_session_by_token(other_session.token)
+    end
+
+    test "returns {0, nil} when no sessions exist for the email" do
+      assert {0, nil} = MagicAuth.delete_all_sessions_by_email("nonexistent@example.com")
+    end
+  end
 end
