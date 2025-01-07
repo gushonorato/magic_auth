@@ -24,16 +24,11 @@ defmodule MagicAuthTest do
 
     conn =
       build_conn()
-      |> Map.put(:secret_key_base, "lero")
+      |> Map.put(:secret_key_base, MagicAuthTestWeb.Endpoint.config(:secret_key_base))
       |> put_private(:phoenix_endpoint, MagicAuthTest.TestEndpoint)
       |> Plug.Test.init_test_session(%{})
 
     %{conn: conn}
-  end
-
-  defmodule TestEndpoint do
-    def config(:secret_key_base), do: "lero"
-    def config(:live_view), do: [signing_salt: "outro-lero"]
   end
 
   describe "create_one_time_password/1" do

@@ -33,7 +33,7 @@ defmodule MagicAuth.VerifyController do
         redirect(conn, to: redirect_to)
 
       {:ok, _one_time_password} ->
-        redirect(conn, to: "/")
+        MagicAuth.log_in(conn, email)
     end
   end
 end
