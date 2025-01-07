@@ -28,7 +28,9 @@ defmodule MagicAuthTest do
       |> put_private(:phoenix_endpoint, MagicAuthTest.TestEndpoint)
       |> Plug.Test.init_test_session(%{})
 
-    %{conn: conn}
+    email = "user@example.com"
+
+    %{conn: conn, email: email}
   end
 
   describe "create_one_time_password/1" do
@@ -301,6 +303,32 @@ defmodule MagicAuthTest do
       |> MagicAuth.Config.repo_module().update!()
 
       assert MagicAuth.get_session_by_token(token) == nil
+    end
+  end
+
+  describe "logout_user/1" do
+    test "erases session and cookies", %{conn: conn, email: email} do
+      session_token = MagicAuth.create_session(email)
+
+      conn =
+        conn
+        |> put_session(:session_token, session_token)
+        |> put_req_cookie(MagicAuth.Config.remember_me_cookie(), session_token)
+        |> fetch_cookies()
+        |> MagicAuth.log_out()
+
+      refute get_session(conn, :session_token)
+      refute conn.cookies[MagicAuth.Config.remember_me_cookie()]
+      assert %{max_age: 0} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
+      assert redirected_to(conn) == "/"
+      refute MagicAuth.get_session_by_token(session_token)
+    end
+
+    test "works even if user is already logged out", %{conn: conn} do
+      conn = conn |> fetch_cookies() |> MagicAuth.log_out()
+      refute get_session(conn, :session_token)
+      assert %{max_age: 0} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
+      assert redirected_to(conn) == "/"
     end
   end
 end

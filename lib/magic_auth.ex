@@ -123,7 +123,7 @@ defmodule MagicAuth do
     |> redirect(to: return_to || MagicAuth.Config.router().__magic_auth__(:signed_in))
   end
 
-  defp create_session(email) do
+  def create_session(email) do
     {token, session} = Session.build_session(email)
     MagicAuth.Config.repo_module().insert!(session)
     token
@@ -176,5 +176,32 @@ defmodule MagicAuth do
   def get_session_by_token(token) do
     {:ok, query} = Session.verify_session_token_query(token, MagicAuth.Config.session_validity_in_days())
     MagicAuth.Config.repo_module().one(query)
+  end
+
+  @doc """
+  Logs the user out.
+
+  It clears all session data for safety. See renew_session.
+  """
+  def log_out(conn) do
+    session_token = get_session(conn, :session_token)
+    session_token && delete_session_token(session_token)
+
+    if live_socket_id = get_session(conn, :live_socket_id) do
+      MagicAuth.Config.endpoint().broadcast(live_socket_id, "disconnect", %{})
+    end
+
+    conn
+    |> renew_session()
+    |> delete_resp_cookie(MagicAuth.Config.remember_me_cookie())
+    |> redirect(to: "/")
+  end
+
+  @doc """
+  Deletes the signed token with the given context.
+  """
+  def delete_session_token(token) do
+    MagicAuth.Config.repo_module().delete_all(from s in Session, where: s.token == ^token)
+    :ok
   end
 end

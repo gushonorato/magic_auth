@@ -38,6 +38,6 @@ defmodule MagicAuth.SessionController do
   end
 
   def logout(conn, _params) do
-    conn
+    MagicAuth.log_out(conn)
   end
 end
