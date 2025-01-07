@@ -52,6 +52,7 @@ defmodule MagicAuth.Router do
   defmacro __using__(_opts) do
     quote do
       import MagicAuth.Router
+      import MagicAuth, only: [require_authenticated: 2, redirect_if_authenticated: 2, fetch_current_user_session: 2]
     end
   end
 
@@ -88,6 +89,7 @@ defmodule MagicAuth.Router do
       # /auth/entrar
       # /auth/senha
       # /auth/verificar
+      # /auth/sair
   """
   defmacro magic_auth(scope \\ "/sessions", opts \\ []) do
     log_in = Keyword.get(opts, :log_in, "/log_in")
@@ -130,12 +132,21 @@ defmodule MagicAuth.Router do
       defp concat_query(path, query), do: path <> "?" <> URI.encode_query(query)
 
       scope scope, MagicAuth do
-        pipe_through :browser
+        pipe_through [:browser, :require_authenticated]
 
-        live login, LoginLive
-        live password, PasswordLive
+        delete log_out, SessionController, :log_out
+      end
+
+      scope scope, MagicAuth do
+        pipe_through [:browser, :redirect_if_authenticated]
+
+        live_session :redirect_if_authenticated,
+          on_mount: [{MagicAuth, :redirect_if_authenticated}] do
+          live log_in, LoginLive
+          live password, PasswordLive
+        end
+
         get verify, SessionController, :verify
-        delete logout, SessionController, :logout
       end
     end
   end

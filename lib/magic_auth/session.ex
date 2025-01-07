@@ -32,7 +32,7 @@ defmodule MagicAuth.Session do
   """
   def build_session(email) do
     token = :crypto.strong_rand_bytes(@rand_size)
-    {token, %__MODULE__{token: token, email: email}}
+    %__MODULE__{token: token, email: email}
   end
 
   @doc """

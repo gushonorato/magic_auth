@@ -3,6 +3,7 @@ defmodule MagicAuthTest do
 
   import Mox
 
+  require Phoenix.LiveView
   alias MagicAuth.{OneTimePassword, Session}
 
   setup :verify_on_exit!
@@ -25,7 +26,7 @@ defmodule MagicAuthTest do
     conn =
       build_conn()
       |> Map.put(:secret_key_base, MagicAuthTestWeb.Endpoint.config(:secret_key_base))
-      |> put_private(:phoenix_endpoint, MagicAuthTest.TestEndpoint)
+      |> put_private(:phoenix_endpoint, MagicAuthTestWeb.Endpoint)
       |> Plug.Test.init_test_session(%{})
 
     email = "user@example.com"
@@ -306,9 +307,10 @@ defmodule MagicAuthTest do
     end
   end
 
-  describe "logout_user/1" do
+  describe "log_out/1" do
     test "erases session and cookies", %{conn: conn, email: email} do
-      session_token = MagicAuth.create_session(email)
+      session = MagicAuth.create_session!(email)
+      session_token = session.token
 
       conn =
         conn
@@ -329,6 +331,177 @@ defmodule MagicAuthTest do
       refute get_session(conn, :session_token)
       assert %{max_age: 0} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
       assert redirected_to(conn) == "/"
+    end
+  end
+
+  describe "session authentication" do
+    test "fetch_current_user_session returns nil when there is no token", %{conn: conn} do
+      conn = MagicAuth.fetch_current_user_session(conn, [])
+      assert conn.assigns.current_user_session == nil
+    end
+
+    test "fetch_current_user_session loads session when token is valid", %{conn: conn} do
+      email = "test@example.com"
+      session = MagicAuth.create_session!(email)
+
+      conn =
+        conn
+        |> put_session(:session_token, session.token)
+        |> MagicAuth.fetch_current_user_session([])
+
+      assert %Session{email: ^email} = conn.assigns.current_user_session
+    end
+  end
+
+  describe "require_authenticated/2" do
+    test "redirects when not authenticated", %{conn: conn} do
+      conn = conn |> fetch_flash() |> MagicAuth.require_authenticated([])
+
+      assert conn.halted
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) == "You must log in to access this page."
+      assert redirected_to(conn) == MagicAuth.Config.router().__magic_auth__(:log_in)
+    end
+
+    test "allows access when authenticated", %{conn: conn} do
+      email = "test@example.com"
+      session = MagicAuth.create_session!(email)
+
+      conn =
+        conn
+        |> put_session(:session_token, session.token)
+        |> assign(:current_user_session, %Session{email: email})
+        |> MagicAuth.require_authenticated([])
+
+      refute conn.halted
+    end
+  end
+
+  describe "fetch_current_user_session/2" do
+    test "loads session from session token when there is no remember_me cookie", %{conn: conn} do
+      email = "test@example.com"
+      session = MagicAuth.create_session!(email)
+
+      conn =
+        conn
+        |> put_session(:session_token, session.token)
+        |> MagicAuth.fetch_current_user_session([])
+
+      assert %Session{email: ^email} = conn.assigns.current_user_session
+    end
+
+    test "loads session from remember_me cookie when there is no session token", %{conn: conn} do
+      email = "test@example.com"
+
+      conn = MagicAuth.log_in(conn, email)
+      conn = MagicAuth.fetch_current_user_session(conn, [])
+
+      assert %Session{email: ^email} = conn.assigns.current_user_session
+    end
+
+    test "returns nil when there is no session token and no remember_me cookie", %{conn: conn} do
+      conn = MagicAuth.fetch_current_user_session(conn,[])
+
+      assert conn.assigns.current_user_session == nil
+    end
+
+    test "returns nil when remember_me cookie token is invalid", %{conn: conn} do
+      conn =
+        conn
+        |> put_resp_cookie(MagicAuth.Config.remember_me_cookie(), "invalid_token", MagicAuth.remember_me_options())
+        |> MagicAuth.fetch_current_user_session([])
+
+      assert conn.assigns.current_user_session == nil
+    end
+  end
+
+  describe "redirect_if_authenticated/2" do
+    test "redirects when authenticated", %{conn: conn} do
+      conn =
+        conn
+        |> assign(:current_user_session, %Session{email: "test@example.com"})
+        |> MagicAuth.redirect_if_authenticated([])
+
+      assert conn.halted
+      assert redirected_to(conn) == MagicAuth.Config.router().__magic_auth__(:signed_in)
+    end
+  end
+
+  describe "on_mount :mount_current_user_session" do
+    test "assigns nil when there is no token" do
+      socket = %Phoenix.LiveView.Socket{}
+      session = %{}
+
+      assert {:cont, socket} = MagicAuth.on_mount(:mount_current_user_session, %{}, session, socket)
+      assert socket.assigns.current_user_session == nil
+    end
+
+    test "loads session when token is valid" do
+      socket = %Phoenix.LiveView.Socket{}
+      email = "test@example.com"
+      session = MagicAuth.create_session!(email)
+      session_data = %{"session_token" => session.token}
+
+      assert {:cont, socket} = MagicAuth.on_mount(:mount_current_user_session, %{}, session_data, socket)
+      assert %Session{email: ^email} = socket.assigns.current_user_session
+    end
+  end
+
+  describe "on_mount :require_authenticated" do
+    test "redirects when not authenticated" do
+      socket = %Phoenix.LiveView.Socket{}
+      socket = Map.put(socket, :assigns, Map.put(socket.assigns || %{}, :flash, %{}))
+      session = %{}
+
+      assert {:halt, socket} = MagicAuth.on_mount(:require_authenticated, %{}, session, socket)
+      assert socket.assigns.current_user_session == nil
+      assert socket.redirected == {:redirect, %{to: MagicAuth.Config.router().__magic_auth__(:log_in), status: 302}}
+      assert Phoenix.Flash.get(socket.assigns.flash, :error) == "You must log in to access this page."
+    end
+
+    test "allows access when authenticated" do
+      socket = %Phoenix.LiveView.Socket{}
+      email = "test@example.com"
+      session = MagicAuth.create_session!(email)
+      session_data = %{"session_token" => session.token}
+
+      assert {:cont, socket} = MagicAuth.on_mount(:require_authenticated, %{}, session_data, socket)
+      assert %Session{email: ^email} = socket.assigns.current_user_session
+    end
+  end
+
+  describe "on_mount :redirect_if_authenticated" do
+    test "redirects when authenticated" do
+      socket = %Phoenix.LiveView.Socket{}
+      email = "test@example.com"
+      session = MagicAuth.create_session!(email)
+      session_data = %{"session_token" => session.token}
+
+      assert {:halt, socket} = MagicAuth.on_mount(:redirect_if_authenticated, %{}, session_data, socket)
+      assert socket.redirected == {:redirect, %{to: MagicAuth.Config.router().__magic_auth__(:signed_in), status: 302}}
+    end
+
+    test "allows access when not authenticated" do
+      socket = %Phoenix.LiveView.Socket{}
+      session = %{}
+
+      assert {:cont, socket} = MagicAuth.on_mount(:redirect_if_authenticated, %{}, session, socket)
+      assert socket.assigns.current_user_session == nil
+    end
+  end
+
+  describe "delete_sessions_by_token/1" do
+    test "removes the session", %{conn: conn} do
+      email = "test@example.com"
+      session = MagicAuth.create_session!(email)
+
+      assert :ok = MagicAuth.delete_sessions_by_token(session.token)
+
+      conn =
+        conn
+        |> put_session(:session_token, session.token)
+        |> MagicAuth.fetch_current_user_session([])
+
+      assert conn.assigns.current_user_session == nil
     end
   end
 end
