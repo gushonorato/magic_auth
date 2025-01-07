@@ -114,8 +114,8 @@ defmodule MagicAuth.Router do
       scope scope, MagicAuth do
         pipe_through :browser
 
-        live login, LoginLive, :magic_auth_login
-        live password, PasswordLive, :magic_auth_password
+        live login, LoginLive
+        live password, PasswordLive
         get verify, VerifyController, :verify
       end
     end

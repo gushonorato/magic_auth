@@ -1,7 +1,7 @@
 defmodule MagicAuth.RouterTest do
   use ExUnit.Case, async: true
 
-  alias MagicAuth.RouterTest.TestRouter
+  alias MagicAuthTestWeb.Router
 
   defmodule CustomRouter do
     use Phoenix.Router, helpers: false
@@ -24,34 +24,34 @@ defmodule MagicAuth.RouterTest do
 
   describe "default routes" do
     test "generates routes with default paths" do
-      routes = TestRouter.__routes__()
+      routes = Router.__routes__()
 
-      assert route_exists?(routes, "/sessions/login", :magic_auth_login)
-      assert route_exists?(routes, "/sessions/password", :magic_auth_password)
+      assert route_exists?(routes, "/sessions/login", nil)
+      assert route_exists?(routes, "/sessions/password", nil)
       assert route_exists?(routes, "/sessions/verify", :verify)
     end
 
     test "generates introspection functions with default paths" do
-      assert TestRouter.__magic_auth__(:scope) == "/sessions"
-      assert TestRouter.__magic_auth__(:login, %{}) == "/sessions/login"
-      assert TestRouter.__magic_auth__(:password, %{}) == "/sessions/password"
-      assert TestRouter.__magic_auth__(:verify, %{}) == "/sessions/verify"
-      assert TestRouter.__magic_auth__(:signed_in, %{}) == "/"
+      assert Router.__magic_auth__(:scope) == "/sessions"
+      assert Router.__magic_auth__(:login, %{}) == "/sessions/login"
+      assert Router.__magic_auth__(:password, %{}) == "/sessions/password"
+      assert Router.__magic_auth__(:verify, %{}) == "/sessions/verify"
+      assert Router.__magic_auth__(:signed_in, %{}) == "/"
     end
 
     test "generates URLs with query parameters" do
       params = %{email: "test@example.com", foo: "bar"}
 
-      assert TestRouter.__magic_auth__(:login, params) |> URI.decode() ==
+      assert Router.__magic_auth__(:login, params) |> URI.decode() ==
                "/sessions/login?foo=bar&email=test@example.com"
 
-      assert TestRouter.__magic_auth__(:password, params) |> URI.decode() ==
+      assert Router.__magic_auth__(:password, params) |> URI.decode() ==
                "/sessions/password?foo=bar&email=test@example.com"
 
-      assert TestRouter.__magic_auth__(:verify, params) |> URI.decode() ==
+      assert Router.__magic_auth__(:verify, params) |> URI.decode() ==
                "/sessions/verify?foo=bar&email=test@example.com"
 
-      assert TestRouter.__magic_auth__(:signed_in, params) |> URI.decode() ==
+      assert Router.__magic_auth__(:signed_in, params) |> URI.decode() ==
                "/?foo=bar&email=test@example.com"
     end
   end
@@ -60,8 +60,8 @@ defmodule MagicAuth.RouterTest do
     test "generates routes with custom paths" do
       routes = CustomRouter.__routes__()
 
-      assert route_exists?(routes, "/auth/entrar", :magic_auth_login)
-      assert route_exists?(routes, "/auth/senha", :magic_auth_password)
+      assert route_exists?(routes, "/auth/entrar", nil)
+      assert route_exists?(routes, "/auth/senha", nil)
       assert route_exists?(routes, "/auth/verificar", :verify)
     end
 

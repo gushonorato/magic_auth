@@ -1,4 +1,4 @@
-defmodule MagicAuth.RouterTest.TestRouter do
+defmodule MagicAuthTestWeb.Router do
   use Phoenix.Router, helpers: false
   use MagicAuth.Router
 
