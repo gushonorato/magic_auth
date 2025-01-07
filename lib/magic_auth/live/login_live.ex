@@ -29,14 +29,14 @@ defmodule MagicAuth.LoginLive do
         {:noreply, push_navigate(socket, to: path)}
 
       {:error, changeset} ->
-        form = changeset |> Map.put(:action, :login) |> to_auth_form()
+        form = changeset |> Map.put(:action, :log_in) |> to_auth_form()
         {:noreply, assign(socket, form: form)}
     end
   end
 
   def login_form(assigns) do
     module = MagicAuth.Config.callback_module()
-    apply(module, :login_form, [assigns])
+    apply(module, :log_in_form, [assigns])
   end
 
   def render(assigns) do

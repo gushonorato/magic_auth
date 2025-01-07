@@ -9,14 +9,14 @@ defmodule <%= @web_module %>.MagicAuth do
   This module implements the `MagicAuth.Callbacks` behaviour and provides customizable
   components that can be tailored to match your application's needs:
 
-  - Login form rendering for email input
+  - Log in form rendering for email input
   - One-time password verification form rendering
   - Email delivery of one-time password codes
   - HTML and text email templates
 
   The authentication flow consists of three steps:
 
-  1. User enters their email in the login form
+  1. User enters their email in the log in form
   2. User receives a one-time password code via email
   3. User enters the code in the verification form to complete authentication
 
@@ -25,7 +25,7 @@ defmodule <%= @web_module %>.MagicAuth do
   This module is designed to be highly customizable to better fit your application's
   specific requirements. You can customize:
 
-  - The login form appearance by modifying `login_form/1`
+  - The log in form appearance by modifying `log_in_form/1`
   - The verification form appearance by modifying `verify_form/1`
   - Email templates by modifying `text_email_body/1` and `html_email_body/1`
 
@@ -36,7 +36,7 @@ defmodule <%= @web_module %>.MagicAuth do
   attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the email"
 
   @doc """
-  Renders the login form displayed at `/sessions/login` where users can enter their email
+  Renders the log in form displayed at `/sessions/log_in` where users can enter their email
   to request a one-time password code.
 
   This form is the first step in the authentication flow. After submitting a valid email,
@@ -45,7 +45,7 @@ defmodule <%= @web_module %>.MagicAuth do
   You can customize this form by editing this function to meet your project's specific needs.
   """
   @impl true
-  def login_form(assigns) do
+  def log_in_form(assigns) do
     ~H"""
     <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-md w-full space-y-8">
@@ -70,7 +70,7 @@ defmodule <%= @web_module %>.MagicAuth do
               type="submit"
               class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              {gettext("Send login code")}
+              {gettext("Send log in code")}
             </button>
           </div>
         </.form>
