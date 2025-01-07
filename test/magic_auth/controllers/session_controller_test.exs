@@ -1,4 +1,4 @@
-defmodule MagicAuth.VerifyControllerTest do
+defmodule MagicAuth.SessionControllerTest do
   use MagicAuth.ConnCase, async: false
 
   alias MagicAuthTestWeb.Router

@@ -1,4 +1,4 @@
-defmodule MagicAuth.VerifyController do
+defmodule MagicAuth.SessionController do
   use Phoenix.Controller
   import Plug.Conn
 
@@ -35,5 +35,9 @@ defmodule MagicAuth.VerifyController do
       {:ok, _one_time_password} ->
         MagicAuth.log_in(conn, email)
     end
+  end
+
+  def logout(conn, _params) do
+    conn
   end
 end
