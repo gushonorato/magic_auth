@@ -33,7 +33,7 @@ defmodule MagicAuth.SessionControllerTest do
           "code" => "123456"
         })
 
-      assert redirected_to(conn) == Router.__magic_auth__(:login)
+      assert redirected_to(conn) == Router.__magic_auth__(:log_in)
     end
 
     test "redireciona para página de senha quando código é inválido", %{conn: conn, email: email} do

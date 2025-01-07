@@ -14,7 +14,7 @@ defmodule MagicAuth.SessionController do
         redirect(conn, to: redirect_to)
 
       not valid_email?(email) ->
-        redirect_to = MagicAuth.Config.router().__magic_auth__(:login)
+        redirect_to = MagicAuth.Config.router().__magic_auth__(:log_in)
         redirect(conn, to: redirect_to)
     end
   end
@@ -37,7 +37,7 @@ defmodule MagicAuth.SessionController do
     end
   end
 
-  def logout(conn, _params) do
+  def log_out(conn, _params) do
     MagicAuth.log_out(conn)
   end
 end

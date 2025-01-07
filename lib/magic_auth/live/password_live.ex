@@ -11,7 +11,7 @@ defmodule MagicAuth.PasswordLive do
   def handle_params(params, _uri, socket) do
     case parse_email(params) do
       nil ->
-        redirect_to = MagicAuth.Config.router().__magic_auth__(:login)
+        redirect_to = MagicAuth.Config.router().__magic_auth__(:log_in)
         {:noreply, push_navigate(socket, to: redirect_to)}
 
       email ->

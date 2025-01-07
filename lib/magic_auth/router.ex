@@ -37,7 +37,7 @@ defmodule MagicAuth.Router do
   The following functions are used internally to generate and manage authentication routes:
 
   - `__magic_auth__(:scope)` - Returns the configured base path
-  - `__magic_auth__(:login, query)` - Returns the login path with optional query parameters
+  - `__magic_auth__(:log_in, query)` - Returns the login path with optional query parameters
   - `__magic_auth__(:password, query)` - Returns the password path with optional query parameters
   - `__magic_auth__(:verify, query)` - Returns the verify path with optional query parameters
   - `__magic_auth__(:signed_in, query)` - Returns the signed in path with optional query parameters
@@ -46,7 +46,7 @@ defmodule MagicAuth.Router do
 
   ### Example
 
-    __magic_auth__(:login, %{foo: "bar", foo: "bar"})
+    __magic_auth__(:log_in, %{foo: "bar", foo: "bar"})
     # Returns: "/sessions/login?foo=bar
   """
   defmacro __using__(_opts) do
@@ -62,49 +62,54 @@ defmodule MagicAuth.Router do
 
     * `scope` - Base path for authentication routes. Default: "/sessions"
     * `opts` - List of options to customize paths:
-      * `:login` - Path for login page. Default: "/login"
+      * `:log_in` - Path for login page. Default: "/log_in"
       * `:password` - Path for password page. Default: "/password"
       * `:verify` - Path for verify controller. Default: "/verify"
-      * `:logout` - Path for logout controller. Default: "/logout"
+      * `:log_out` - Path for log out controller. Default: "/log_out"
       * `:signed_in` - Path for signed in page. Default: "/"
 
   ## Example
 
       # Default configuration
+
       magic_auth()
+
       # Generates:
-      # /sessions/login
+      # /sessions/log_in
       # /sessions/password
       # /sessions/verify
+      # /sessions/log_out
 
       # Custom configuration
-      magic_auth("/auth", login: "/entrar", password: "/senha", verify: "/verificar")
+
+      magic_auth("/auth", log_in: "/entrar", password: "/senha", verify: "/verificar", log_out: "/sair")
+
       # Generates:
       # /auth/entrar
       # /auth/senha
       # /auth/verificar
   """
   defmacro magic_auth(scope \\ "/sessions", opts \\ []) do
-    login = Keyword.get(opts, :login, "/login")
+    log_in = Keyword.get(opts, :log_in, "/log_in")
     password = Keyword.get(opts, :password, "/password")
     verify = Keyword.get(opts, :verify, "/verify")
-    logout = Keyword.get(opts, :logout, "/logout")
+    log_out = Keyword.get(opts, :log_out, "/log_out")
     signed_in = Keyword.get(opts, :signed_in, "/")
 
     quote bind_quoted: [
             scope: scope,
-            login: login,
+            log_in: log_in,
             password: password,
             verify: verify,
-            logout: logout,
+            log_out: log_out,
             signed_in: signed_in
           ] do
       def __magic_auth__(:scope), do: unquote(scope)
 
       def __magic_auth__(path, query \\ %{})
 
-      def __magic_auth__(:login, query) do
-        concat_query(__magic_auth__(:scope) <> unquote(login), query)
+      def __magic_auth__(:log_in, query) do
+        concat_query(__magic_auth__(:scope) <> unquote(log_in), query)
       end
 
       def __magic_auth__(:password, query) do
@@ -115,8 +120,8 @@ defmodule MagicAuth.Router do
         concat_query(__magic_auth__(:scope) <> unquote(verify), query)
       end
 
-      def __magic_auth__(:logout, query) do
-        concat_query(__magic_auth__(:scope) <> unquote(logout), query)
+      def __magic_auth__(:log_out, query) do
+        concat_query(__magic_auth__(:scope) <> unquote(log_out), query)
       end
 
       def __magic_auth__(:signed_in, query), do: concat_query(unquote(signed_in), query)
