@@ -355,6 +355,10 @@ defmodule MagicAuthTest do
 
   describe "require_authenticated/2" do
     test "redirects when not authenticated", %{conn: conn} do
+      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :unauthorized ->
+        "You must log in to access this page."
+      end)
+
       conn = conn |> fetch_flash() |> MagicAuth.require_authenticated([])
 
       assert conn.halted
@@ -448,6 +452,10 @@ defmodule MagicAuthTest do
 
   describe "on_mount :require_authenticated" do
     test "redirects when not authenticated" do
+      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :unauthorized ->
+        "You must log in to access this page."
+      end)
+
       socket = %Phoenix.LiveView.Socket{}
       socket = Map.put(socket, :assigns, Map.put(socket.assigns || %{}, :flash, %{}))
       session = %{}

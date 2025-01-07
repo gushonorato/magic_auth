@@ -28,8 +28,8 @@ defmodule MagicAuth.PasswordLive do
 
   defp parse_email(_params), do: nil
 
-  defp parse_error(%{"error" => "invalid_code"}), do: "Invalid code"
-  defp parse_error(%{"error" => "code_expired"}), do: "Code expired"
+  defp parse_error(%{"error" => "invalid_code"}), do: MagicAuth.Config.callback_module().translate_error(:invalid_code)
+  defp parse_error(%{"error" => "code_expired"}), do: MagicAuth.Config.callback_module().translate_error(:code_expired)
   defp parse_error(_params), do: nil
 
   def handle_event("verify", %{"auth" => %{"password" => password}}, socket) do

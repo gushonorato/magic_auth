@@ -217,7 +217,7 @@ defmodule MagicAuth do
   ## Examples
 
       iex> MagicAuth.delete_all_sessions_by_email("user@example.com")
-      {n, nil} # where n is the number of deleted sessions
+      {0, nil} # where n is the number of deleted sessions
   """
   def delete_all_sessions_by_email(email) do
     MagicAuth.Config.repo_module().delete_all(from s in Session, where: s.email == ^email)
@@ -255,7 +255,7 @@ defmodule MagicAuth do
       conn
     else
       conn
-      |> put_flash(:error, "You must log in to access this page.")
+      |> put_flash(:error, MagicAuth.Config.callback_module().translate_error(:unauthorized))
       |> maybe_store_return_to()
       |> redirect(to: MagicAuth.Config.router().__magic_auth__(:log_in))
       |> halt()
@@ -293,7 +293,7 @@ defmodule MagicAuth do
     else
       socket =
         socket
-        |> Phoenix.LiveView.put_flash(:error, "You must log in to access this page.")
+        |> Phoenix.LiveView.put_flash(:error, MagicAuth.Config.callback_module().translate_error(:unauthorized))
         |> Phoenix.LiveView.redirect(to: MagicAuth.Config.router().__magic_auth__(:log_in))
 
       {:halt, socket}
