@@ -16,7 +16,7 @@ defmodule MagicAuth.SessionControllerTest do
       Application.delete_env(:magic_auth, :callbacks)
     end)
 
-    Mox.stub(MagicAuth.CallbacksMock, :on_one_time_password_requested, fn _code, _one_time_password -> :ok end)
+    Mox.stub(MagicAuth.CallbacksMock, :one_time_password_requested, fn _code, _one_time_password -> :ok end)
 
     conn = build_conn() |> Plug.Test.init_test_session(%{})
 

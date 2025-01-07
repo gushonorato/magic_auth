@@ -15,7 +15,7 @@ defmodule MagicAuthTest do
     Application.put_env(:magic_auth_test, :ecto_repos, [MagicAuthTest.Repo])
     Application.put_env(:magic_auth, :callbacks, MagicAuth.CallbacksMock)
 
-    Mox.stub(MagicAuth.CallbacksMock, :on_one_time_password_requested, fn _code, _one_time_password -> :ok end)
+    Mox.stub(MagicAuth.CallbacksMock, :one_time_password_requested, fn _code, _one_time_password -> :ok end)
 
     on_exit(fn ->
       Application.delete_env(:magic_auth, :otp_app)
@@ -82,10 +82,10 @@ defmodule MagicAuthTest do
       assert String.length(token.hashed_password) == 60
     end
 
-    test "calls on_one_time_password_requested callback" do
+    test "calls one_time_password_requested callback" do
       email = "user@example.com"
 
-      expect(MagicAuth.CallbacksMock, :on_one_time_password_requested, fn _code, on_time_password ->
+      expect(MagicAuth.CallbacksMock, :one_time_password_requested, fn _code, on_time_password ->
         assert on_time_password.email == email
         :ok
       end)
@@ -403,7 +403,7 @@ defmodule MagicAuthTest do
     end
 
     test "returns nil when there is no session token and no remember_me cookie", %{conn: conn} do
-      conn = MagicAuth.fetch_current_user_session(conn,[])
+      conn = MagicAuth.fetch_current_user_session(conn, [])
 
       assert conn.assigns.current_user_session == nil
     end

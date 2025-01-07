@@ -18,7 +18,7 @@ defmodule MagicAuth do
 
   When called, this function creates a new one_time_password record and generates
   a one-time password that will be used to authenticate it. The password is then passed
-  to the configured callback module `on_one_time_password_requested/2` which should handle
+  to the configured callback module `one_time_password_requested/2` which should handle
   sending it to the user via email.
 
   ## Parameters
@@ -49,7 +49,7 @@ defmodule MagicAuth do
   3. Generates a new random numeric password
   4. Encrypts the password using Bcrypt
   5. Stores the hash in the database
-  6. Calls the configured callback module's `on_one_time_password_requested/2` function
+  6. Calls the configured callback module's `one_time_password_requested/2` function
      which should handle sending the password to the user via email
   """
   def create_one_time_password(attrs) do
@@ -69,7 +69,7 @@ defmodule MagicAuth do
       |> MagicAuth.Config.repo_module().transaction()
       |> case do
         {:ok, %{insert_one_time_passwords: one_time_password}} ->
-          MagicAuth.Config.callback_module().on_one_time_password_requested(code, one_time_password)
+          MagicAuth.Config.callback_module().one_time_password_requested(code, one_time_password)
           {:ok, {code, one_time_password}}
 
         {:error, _failed_operation, failed_value, _changes_so_far} ->

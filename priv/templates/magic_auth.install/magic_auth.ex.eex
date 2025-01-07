@@ -182,7 +182,7 @@ defmodule <%= @web_module %>.MagicAuth do
 #    * `code` - The one-time password code generated to be sent via email
 #    * `one_time_password` - The `OneTimePassword` struct containing the user's email
   @impl true
-  def on_one_time_password_requested(code, %MagicAuth.OneTimePassword{email: email}) do
+  def one_time_password_requested(code, %MagicAuth.OneTimePassword{email: email}) do
     Swoosh.Email.new()
     |> Swoosh.Email.to(email)
     |> Swoosh.Email.from({"Sender name", "noreply@example.com"})
