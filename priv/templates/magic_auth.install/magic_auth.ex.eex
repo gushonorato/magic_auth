@@ -34,6 +34,7 @@ defmodule <%= @web_module %>.MagicAuth do
   # application while using the magic one-time password authentication functionality.
 
   attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the email"
+  attr :flash, :map, required: true, doc: "the flash messages to display"
 
   # Renders the log in form displayed at `/sessions/log_in` where users can enter their email
   # to request a one-time password code.
@@ -45,6 +46,7 @@ defmodule <%= @web_module %>.MagicAuth do
   @impl true
   def log_in_form(assigns) do
     ~H"""
+    <.flash_group flash={@flash} />
     <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-md w-full space-y-8">
         <div class="-mt-32">
@@ -79,6 +81,7 @@ defmodule <%= @web_module %>.MagicAuth do
 
   attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the One Time Password code"
   attr :error, :string, required: true, doc: "error message to display if verification fails"
+  attr :flash, :map, required: true, doc: "the flash messages to display"
   attr :email, :string, required: true, doc: "the user's email to which the code was sent"
 
   @doc """
@@ -93,6 +96,7 @@ defmodule <%= @web_module %>.MagicAuth do
   @impl true
   def verify_form(assigns) do
     ~H"""
+    <.flash_group flash={@flash} />
     <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div class="max-w-md w-full space-y-8">
         <div class="-mt-32">

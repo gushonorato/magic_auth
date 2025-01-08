@@ -41,7 +41,7 @@ defmodule MagicAuth.LoginLive do
 
   def render(assigns) do
     ~H"""
-    <.login_form form={@form} />
+    <.login_form form={@form} flash={@flash} />
     """
   end
 end

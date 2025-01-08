@@ -51,7 +51,7 @@ defmodule MagicAuth.PasswordLive do
 
   def render(assigns) do
     ~H"""
-    <.verify_form form={@form} email={@email} error={@error} />
+    <.verify_form form={@form} email={@email} error={@error} flash={@flash} />
     """
   end
 end
