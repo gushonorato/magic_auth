@@ -522,12 +522,12 @@ defmodule MagicAuthTest do
     end
   end
 
-  describe "delete_sessions_by_token/1" do
+  describe "delete_all_sessions_by_token/1" do
     test "removes the session", %{conn: conn} do
       email = "test@example.com"
       session = MagicAuth.create_session!(email)
 
-      assert :ok = MagicAuth.delete_sessions_by_token(session.token)
+      assert :ok = MagicAuth.delete_all_sessions_by_token(session.token)
 
       conn =
         conn

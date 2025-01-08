@@ -192,7 +192,7 @@ defmodule MagicAuth do
   """
   def log_out(conn) do
     session_token = get_session(conn, :session_token)
-    session_token && delete_sessions_by_token(session_token)
+    session_token && delete_all_sessions_by_token(session_token)
 
     if live_socket_id = get_session(conn, :live_socket_id) do
       MagicAuth.Config.endpoint().broadcast(live_socket_id, "disconnect", %{})
@@ -207,7 +207,7 @@ defmodule MagicAuth do
   @doc """
   Deletes the signed token with the given context.
   """
-  def delete_sessions_by_token(token) do
+  def delete_all_sessions_by_token(token) do
     MagicAuth.Config.repo_module().delete_all(from s in Session, where: s.token == ^token)
     :ok
   end
