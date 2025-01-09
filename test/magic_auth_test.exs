@@ -1,5 +1,5 @@
 defmodule MagicAuthTest do
-  use MagicAuth.ConnCase, async: true
+  use MagicAuth.ConnCase, async: false
 
   import Mox
 
@@ -14,6 +14,7 @@ defmodule MagicAuthTest do
     Application.put_env(:magic_auth, :otp_app, :magic_auth_test)
     Application.put_env(:magic_auth_test, :ecto_repos, [MagicAuthTest.Repo])
     Application.put_env(:magic_auth, :callbacks, MagicAuth.CallbacksMock)
+    Application.put_env(:magic_auth, :enable_rate_limit, false)
 
     Mox.stub(MagicAuth.CallbacksMock, :one_time_password_requested, fn _code, _one_time_password -> :ok end)
     Mox.stub(MagicAuth.CallbacksMock, :log_in_requested, fn _email -> :allow end)
@@ -22,6 +23,7 @@ defmodule MagicAuthTest do
       Application.delete_env(:magic_auth, :otp_app)
       Application.delete_env(:magic_auth_test, :ecto_repos)
       Application.delete_env(:magic_auth, :callbacks)
+      Application.delete_env(:magic_auth, :enable_rate_limit)
     end)
 
     conn =
@@ -92,6 +94,19 @@ defmodule MagicAuthTest do
       end)
 
       {:ok, {_code, _token}} = MagicAuth.create_one_time_password(%{"email" => email})
+    end
+
+    test "returns error when rate limit is reached" do
+      start_supervised!(MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket)
+      Application.put_env(:magic_auth, :enable_rate_limit, true)
+
+      email = "user@example.com"
+
+      assert {:ok, {_code, _token}} = MagicAuth.create_one_time_password(%{"email" => email})
+      assert {:error, :rate_limited} = MagicAuth.create_one_time_password(%{"email" => email})
+
+      Application.delete_env(:magic_auth, :enable_rate_limit)
+      stop_supervised!(MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket)
     end
   end
 

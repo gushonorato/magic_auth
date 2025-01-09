@@ -181,4 +181,25 @@ defmodule ConfigTest do
       Application.delete_env(:magic_auth, :otp_app)
     end
   end
+
+  describe "rate_limit_enabled?/0" do
+    test "returns true when no configuration is set" do
+      Application.delete_env(:magic_auth, :enable_rate_limit)
+      assert MagicAuth.Config.rate_limit_enabled?() == true
+    end
+
+    test "returns configured value when set" do
+      Application.put_env(:magic_auth, :enable_rate_limit, false)
+      assert MagicAuth.Config.rate_limit_enabled?() == false
+
+      Application.put_env(:magic_auth, :enable_rate_limit, true)
+      assert MagicAuth.Config.rate_limit_enabled?() == true
+    end
+
+    setup do
+      on_exit(fn ->
+        Application.delete_env(:magic_auth, :enable_rate_limit)
+      end)
+    end
+  end
 end

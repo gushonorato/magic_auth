@@ -6,6 +6,7 @@ defmodule MagicAuth.SessionControllerTest do
   @endpoint MagicAuthTestWeb.Endpoint
 
   setup do
+    Application.put_env(:magic_auth, :enable_rate_limit, false)
     Application.put_env(:magic_auth, :otp_app, :magic_auth_test)
     Application.put_env(:magic_auth_test, :ecto_repos, [MagicAuthTest.Repo])
     Application.put_env(:magic_auth, :callbacks, MagicAuth.CallbacksMock)
@@ -14,6 +15,7 @@ defmodule MagicAuth.SessionControllerTest do
       Application.delete_env(:magic_auth, :otp_app)
       Application.delete_env(:magic_auth_test, :ecto_repos)
       Application.delete_env(:magic_auth, :callbacks)
+      Application.delete_env(:magic_auth, :enable_rate_limit)
     end)
 
     Mox.stub(MagicAuth.CallbacksMock, :one_time_password_requested, fn _code, _one_time_password -> :ok end)

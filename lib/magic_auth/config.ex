@@ -71,4 +71,8 @@ defmodule MagicAuth.Config do
   def endpoint() do
     Application.get_env(:magic_auth, :endpoint) || Module.concat([web_module(), "Endpoint"])
   end
+
+  def rate_limit_enabled? do
+    Application.get_env(:magic_auth, :enable_rate_limit, true)
+  end
 end

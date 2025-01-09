@@ -8,6 +8,7 @@ defmodule MagicAuth do
   import Phoenix.Controller
   alias Ecto.Multi
   alias MagicAuth.{Session, OneTimePassword}
+  alias MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket
 
   @doc """
   Creates and sends a one-time password for a given email.
@@ -55,28 +56,47 @@ defmodule MagicAuth do
   def create_one_time_password(attrs) do
     changeset = MagicAuth.OneTimePassword.changeset(%MagicAuth.OneTimePassword{}, attrs)
 
-    if changeset.valid? do
-      code = OneTimePassword.generate_code()
+    cond do
+      changeset.valid? && MagicAuth.Config.rate_limit_enabled?() ->
+        maybe_create_one_time_password(changeset)
 
-      Multi.new()
-      |> Multi.delete_all(
-        :delete_one_time_passwords,
-        from(s in MagicAuth.OneTimePassword, where: s.email == ^changeset.changes.email)
-      )
-      |> Multi.insert(:insert_one_time_passwords, fn _changes ->
-        Ecto.Changeset.put_change(changeset, :hashed_password, Bcrypt.hash_pwd_salt(code))
-      end)
-      |> MagicAuth.Config.repo_module().transaction()
-      |> case do
-        {:ok, %{insert_one_time_passwords: one_time_password}} ->
-          MagicAuth.Config.callback_module().one_time_password_requested(code, one_time_password)
-          {:ok, {code, one_time_password}}
+      changeset.valid? && not MagicAuth.Config.rate_limit_enabled?() ->
+        do_create_one_time_password(changeset)
 
-        {:error, _failed_operation, failed_value, _changes_so_far} ->
-          {:error, failed_value}
-      end
-    else
-      {:error, changeset}
+      not changeset.valid? ->
+        {:error, changeset}
+    end
+  end
+
+  defp maybe_create_one_time_password(changeset) do
+    case OneTimePasswordRequestTokenBucket.take(changeset.changes.email) do
+      {:ok, _count} ->
+        do_create_one_time_password(changeset)
+
+      {:error, :rate_limited} ->
+        {:error, :rate_limited}
+    end
+  end
+
+  defp do_create_one_time_password(changeset) do
+    code = OneTimePassword.generate_code()
+
+    Multi.new()
+    |> Multi.delete_all(
+      :delete_one_time_passwords,
+      from(s in MagicAuth.OneTimePassword, where: s.email == ^changeset.changes.email)
+    )
+    |> Multi.insert(:insert_one_time_passwords, fn _changes ->
+      Ecto.Changeset.put_change(changeset, :hashed_password, Bcrypt.hash_pwd_salt(code))
+    end)
+    |> MagicAuth.Config.repo_module().transaction()
+    |> case do
+      {:ok, %{insert_one_time_passwords: one_time_password}} ->
+        MagicAuth.Config.callback_module().one_time_password_requested(code, one_time_password)
+        {:ok, {code, one_time_password}}
+
+      {:error, _failed_operation, failed_value, _changes_so_far} ->
+        {:error, failed_value}
     end
   end
 
