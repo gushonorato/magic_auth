@@ -1,6 +1,8 @@
 defmodule MagicAuth.TokenBucketTest do
   use ExUnit.Case, async: false
 
+  alias MagicAuth.TokenBucket
+
   defmodule EmailTokenBucket do
     use MagicAuth.TokenBucket, tokens: 30, reset_interval: 1
   end
@@ -24,7 +26,7 @@ defmodule MagicAuth.TokenBucketTest do
   end
 
   test "EmailTokenBucket is configured with custom options" do
-    assert EmailTokenBucket.opts() == %{
+    assert EmailTokenBucket.config() == %{
              reset_interval: 1,
              table_name: MagicAuth.TokenBucketTest.EmailTokenBucket,
              tokens: 30
@@ -32,7 +34,7 @@ defmodule MagicAuth.TokenBucketTest do
   end
 
   test "LoginAttemptsTokenBucket is configured with default options" do
-    assert LoginAttemptsTokenBucket.opts() == %{
+    assert LoginAttemptsTokenBucket.config() == %{
              reset_interval: :timer.minutes(1),
              table_name: MagicAuth.TokenBucketTest.LoginAttemptsTokenBucket,
              tokens: 10
@@ -61,7 +63,7 @@ defmodule MagicAuth.TokenBucketTest do
     assert {:ok, 29} = EmailTokenBucket.take("test_key")
     assert EmailTokenBucket.get_tokens("test_key") == 29
 
-    EmailTokenBucket.reset()
+    TokenBucket.reset(EmailTokenBucket.config().table_name)
 
     # Verify tokens were reset
     assert EmailTokenBucket.get_tokens("test_key") == 30

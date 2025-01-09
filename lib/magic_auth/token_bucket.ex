@@ -1,10 +1,10 @@
 defmodule MagicAuth.TokenBucket do
-  defmacro __using__(opts \\ []) do
-    quote bind_quoted: [opts: opts] do
+  defmacro __using__(config \\ []) do
+    quote bind_quoted: [config: config] do
       use GenServer
 
-      def opts() do
-        unquote(opts)
+      def config() do
+        unquote(config)
         |> Keyword.validate!(
           table_name: unquote(__MODULE__),
           tokens: 10,
@@ -14,45 +14,47 @@ defmodule MagicAuth.TokenBucket do
       end
 
       def start_link(_opts \\ []) do
-        GenServer.start_link(unquote(__MODULE__), opts(), name: unquote(__MODULE__))
+        GenServer.start_link(unquote(__MODULE__), config(), name: unquote(__MODULE__))
       end
 
-      def init(opts) do
-        :ets.new(opts.table_name, [:set, :named_table, :public])
-        {:ok, _tref} = :timer.send_interval(opts.reset_interval, :reset)
-        {:ok, opts}
+      def init(config) do
+        :ets.new(config.table_name, [:set, :named_table, :public])
+        {:ok, _tref} = :timer.send_interval(config.reset_interval, :reset)
+        {:ok, %{config: config}}
       end
 
-      def handle_info(:reset, state) do
-        reset()
-        {:noreply, state}
-      end
+      defdelegate handle_info(message, state), to: MagicAuth.TokenBucket
 
-      def take(key), do: MagicAuth.TokenBucket.take(key, opts())
-      def get_tokens(key), do: MagicAuth.TokenBucket.get_tokens(key, opts())
-      def reset, do: MagicAuth.TokenBucket.reset(opts())
+      def take(key), do: MagicAuth.TokenBucket.take(key, config())
+      def get_tokens(key), do: MagicAuth.TokenBucket.get_tokens(key, config())
     end
   end
 
-  def take(key, opts) do
-    case :ets.update_counter(opts.table_name, key, -1, {key, opts.tokens}) do
+  def take(key, config) do
+    case :ets.update_counter(config.table_name, key, -1, {key, config.tokens}) do
       count when count >= 0 ->
         {:ok, count}
 
       _ ->
-        :ets.update_counter(opts.table_name, key, 1, {key, 0})
+        :ets.update_counter(config.table_name, key, 1, {key, 0})
         {:error, :rate_limited}
     end
   end
 
-  def get_tokens(key, opts) do
-    case :ets.lookup(opts.table_name, key) do
+  def get_tokens(key, config) do
+    case :ets.lookup(config.table_name, key) do
       [{^key, count}] -> count
-      [] -> opts.tokens
+      [] -> config.tokens
     end
   end
 
-  def reset(state) do
-    :ets.delete_all_objects(state.table_name)
+  def handle_info(:reset, state) do
+    %{config: %{table_name: table_name}} = state
+    reset(table_name)
+    {:noreply, state}
+  end
+
+  def reset(table_name) do
+    :ets.delete_all_objects(table_name)
   end
 end
