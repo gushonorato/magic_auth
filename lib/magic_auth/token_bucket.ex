@@ -19,14 +19,17 @@ defmodule MagicAuth.TokenBucket do
 
       def init(config) do
         :ets.new(config.table_name, [:set, :named_table, :public])
-        {:ok, _tref} = :timer.send_interval(config.reset_interval, :reset)
-        {:ok, %{config: config}}
+        {:ok, _reset_timer} = :timer.send_interval(config.reset_interval, :reset)
+        {:ok, _countdown_timer} = :timer.send_interval(:timer.seconds(1), :update_countdown)
+        {:ok, %{config: config, countdown: config.reset_interval, subscribers: []}}
       end
 
       defdelegate handle_info(message, state), to: MagicAuth.TokenBucket
+      defdelegate handle_cast(message, state), to: MagicAuth.TokenBucket
 
+      def subscribe(pid \\ self()), do: GenServer.cast(unquote(__MODULE__), {:subscribe, pid})
       def take(key), do: MagicAuth.TokenBucket.take(key, config())
-      def get_tokens(key), do: MagicAuth.TokenBucket.get_tokens(key, config())
+      def count(key), do: MagicAuth.TokenBucket.count(key, config())
     end
   end
 
@@ -41,7 +44,7 @@ defmodule MagicAuth.TokenBucket do
     end
   end
 
-  def get_tokens(key, config) do
+  def count(key, config) do
     case :ets.lookup(config.table_name, key) do
       [{^key, count}] -> count
       [] -> config.tokens
@@ -50,11 +53,22 @@ defmodule MagicAuth.TokenBucket do
 
   def handle_info(:reset, state) do
     %{config: %{table_name: table_name}} = state
-    reset(table_name)
-    {:noreply, state}
+    :ets.delete_all_objects(table_name)
+
+    {:noreply, %{state | countdown: state.config.reset_interval}}
   end
 
-  def reset(table_name) do
-    :ets.delete_all_objects(table_name)
+  def handle_info(:update_countdown, state) do
+    countdown = state.countdown - :timer.seconds(1)
+
+    Enum.each(state.subscribers, fn pid ->
+      send(pid, {:countdown_updated, countdown})
+    end)
+
+    {:noreply, %{state | countdown: countdown}}
+  end
+
+  def handle_cast({:subscribe, called_pid}, state) do
+    {:noreply, %{state | subscribers: [called_pid | state.subscribers]}}
   end
 end
