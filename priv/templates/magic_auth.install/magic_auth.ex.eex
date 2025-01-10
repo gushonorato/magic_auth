@@ -322,8 +322,11 @@ defmodule <%= @web_module %>.MagicAuth do
   def translate_error(:unauthorized, _opts), do: "You need to log in to access this page."
   def translate_error(:access_denied, _opts), do: "You don't have permission to access this page."
   def translate_error(:too_many_one_time_password_requests, opts),
-    do: "Too many requests. Wait #{opts[:countdown]} seconds to request a new code."
+    do: "Too many requests. Wait #{display_countdown(opts[:countdown])} to request a new code."
   def translate_error(:code_resent, _opts), do: "Code resent"
   def translate_error(:too_many_login_attempts, opts),
-    do: "Too many login attempts. Wait #{opts[:countdown]} seconds to try again."
+    do: "Too many login attempts. Wait #{display_countdown(opts[:countdown])} to try again."
+
+  defp display_countdown(countdown) when countdown < 60, do: "#{countdown} seconds"
+  defp display_countdown(countdown), do: "#{div(countdown, 60)} minutes"
 end
