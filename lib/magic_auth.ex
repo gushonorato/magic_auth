@@ -6,6 +6,7 @@ defmodule MagicAuth do
   import Ecto.Query
   import Plug.Conn
   import Phoenix.Controller
+  alias MagicAuth.TokenBuckets.LoginAttemptTokenBucket
   alias Ecto.Multi
   alias MagicAuth.{Session, OneTimePassword}
   alias MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket
@@ -125,15 +126,80 @@ defmodule MagicAuth do
   Logs the session in.
 
   It renews the session ID and clears the whole session
-  to avoid fixation attacks. See the renew_session
-  function to customize this behaviour.
+  to avoid fixation attacks.
+
+  Login attempts are rate limited using a token bucket that allows a maximum of
+  10 attempts every 10 minutes per email address.
 
   It also sets a `:live_socket_id` key in the session,
   so LiveView sessions are identified and automatically
-  disconnected on log out. The line can be safely removed
-  if you are not using LiveView.
+  disconnected on log out.
+
+  On login success:
+    - Renews the session to prevent fixation attacks
+    - Sets the token in session and cookie (if remember me is enabled)
+    - Redirects to original page requested or to `/` (default route)
+
+  On error:
+    - If too many attempts: Redirects to `/sessions/log_in` with rate limit error message
+    - If invalid code: Redirects to `/sessions/password`
+    - If expired code: Redirects to `/sessions/password`
+    - If access denied: Redirects to `/sessions/log_in` with access denied error message
+
+  ## Denying access
+
+  To deny access, implement the `log_in_requested/1` callback in your callback module
+  returning `:deny`. For example:
+
+  ```elixir
+  def log_in_requested(email) do
+    case Accounts.get_user_by_email(email) do
+      %User{active: false} -> :deny  # Denies access for inactive users
+      _ -> :allow
+    end
+  end
+  ```
+  For more information on denying access, see the comments for the `log_in_requested/1` function
+  in the generated MagicAuth module in your application's codebase.
+
+  ## Parameters
+  - `conn`: The Plug.Conn connection
+  - `email`: String containing the user's email address
+  - `code`: String containing the one-time password code
   """
-  def log_in(conn, email) do
+  def log_in(conn, email, code) do
+    case LoginAttemptTokenBucket.take(email) do
+      {:ok, _count} ->
+        verify_password(conn, email, code)
+
+      {:error, :rate_limited} ->
+        error_message =
+          MagicAuth.Config.callback_module().translate_error(:too_many_login_attempts,
+            countdown: LoginAttemptTokenBucket.get_countdown()
+          )
+
+        conn
+        |> put_flash(:error, error_message)
+        |> redirect(to: MagicAuth.Config.router().__magic_auth__(:log_in))
+    end
+  end
+
+  defp verify_password(conn, email, code) do
+    case MagicAuth.verify_password(email, code) do
+      {:error, :invalid_code} ->
+        redirect_to = MagicAuth.Config.router().__magic_auth__(:password, %{email: email, error: "invalid_code"})
+        redirect(conn, to: redirect_to)
+
+      {:error, :code_expired} ->
+        redirect_to = MagicAuth.Config.router().__magic_auth__(:password, %{email: email, error: "code_expired"})
+        redirect(conn, to: redirect_to)
+
+      {:ok, _one_time_password} ->
+        perform_log_in(conn, email)
+    end
+  end
+
+  defp perform_log_in(conn, email) do
     case MagicAuth.Config.callback_module().log_in_requested(email) do
       :allow ->
         session = create_session!(email)

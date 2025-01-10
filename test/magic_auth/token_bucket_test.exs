@@ -87,10 +87,21 @@ defmodule MagicAuth.TokenBucketTest do
     assert EmailTokenBucket.count("test_key") == 30
   end
 
+  test "does not decrement tokens when rate limit is disabled" do
+    Application.put_env(:magic_auth, :enable_rate_limit, false)
+
+    assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
+    assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
+    assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
+    assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
+
+    Application.delete_env(:magic_auth, :enable_rate_limit)
+  end
+
   test "subscribers receive countdown updates" do
     test_pid = self()
 
-    # Cria múltiplos processos que se inscrevem para atualizações
+    # Create multiple processes that subscribe for updates
     pids =
       for _i <- 1..3 do
         spawn_link(fn ->
@@ -107,7 +118,7 @@ defmodule MagicAuth.TokenBucketTest do
 
     send(LoginAttemptsTokenBucket, :update_countdown)
 
-    # Verifica se todos os processos receberam a atualização
+    # Verify all processes received the update
     Enum.each(pids, fn pid ->
       assert_receive {:received, ^pid, countdown}
       assert countdown <= 60

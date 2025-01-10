@@ -324,4 +324,6 @@ defmodule <%= @web_module %>.MagicAuth do
   def translate_error(:too_many_one_time_password_requests, opts),
     do: "Too many requests. Wait #{opts[:countdown]} seconds to request a new code."
   def translate_error(:code_resent, _opts), do: "Code resent"
+  def translate_error(:too_many_login_attempts, opts),
+    do: "Too many login attempts. Wait #{opts[:countdown]} seconds to try again."
 end

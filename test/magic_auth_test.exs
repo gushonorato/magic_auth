@@ -33,8 +33,9 @@ defmodule MagicAuthTest do
       |> Plug.Test.init_test_session(%{})
 
     email = "user@example.com"
+    {:ok, code, one_time_password} = MagicAuth.create_one_time_password(%{"email" => email})
 
-    %{conn: conn, email: email}
+    %{conn: conn, email: email, code: code, one_time_password: one_time_password}
   end
 
   describe "create_one_time_password/1" do
@@ -61,19 +62,21 @@ defmodule MagicAuthTest do
       assert List.first(tokens).id == token2.id
     end
 
-    test "does not remove one-time passwords from other emails" do
-      email1 = "user1@example.com"
+    test "does not remove one-time passwords from other emails", %{
+      email: email,
+      one_time_password: existing_one_time_password
+    } do
       email2 = "user2@example.com"
 
-      {:ok, _code1, one_time_password1} = MagicAuth.create_one_time_password(%{"email" => email1})
       {:ok, _code2, one_time_password2} = MagicAuth.create_one_time_password(%{"email" => email2})
-      {:ok, _code3, new_one_time_password1} = MagicAuth.create_one_time_password(%{"email" => email1})
+      {:ok, _code3, new_one_time_password1} = MagicAuth.create_one_time_password(%{"email" => email})
 
       one_time_passwords = MagicAuthTest.Repo.all(OneTimePassword)
+
       assert length(one_time_passwords) == 2
+      refute Enum.any?(one_time_passwords, fn s -> s.id == existing_one_time_password.id end)
       assert Enum.any?(one_time_passwords, fn s -> s.id == one_time_password2.id end)
       assert Enum.any?(one_time_passwords, fn s -> s.id == new_one_time_password1.id end)
-      refute Enum.any?(one_time_passwords, fn s -> s.id == one_time_password1.id end)
     end
 
     test "stores token value as bcrypt hash" do
@@ -228,7 +231,7 @@ defmodule MagicAuthTest do
     end
   end
 
-  describe "log_in/2" do
+  describe "log_in/3" do
     setup do
       Application.put_env(:magic_auth, :router, MagicAuthTestWeb.Router)
 
@@ -237,13 +240,13 @@ defmodule MagicAuthTest do
       end)
     end
 
-    test "returns conn", %{conn: conn} do
-      conn = MagicAuth.log_in(conn, "user@example.com")
+    test "returns conn", %{conn: conn, code: code, email: email} do
+      conn = MagicAuth.log_in(conn, email, code)
       assert %Plug.Conn{} = conn
     end
 
-    test "stores user token in session", %{conn: conn} do
-      conn = conn |> fetch_session() |> MagicAuth.log_in("user@example.com")
+    test "stores user token in session", %{conn: conn, code: code, email: email} do
+      conn = conn |> fetch_session() |> MagicAuth.log_in(email, code)
 
       assert token = get_session(conn, :session_token)
       assert get_session(conn, :live_socket_id) == "magic_auth_sessions:#{Base.url_encode64(token)}"
@@ -251,18 +254,18 @@ defmodule MagicAuthTest do
       assert %Session{} = MagicAuth.get_session_by_token(token)
     end
 
-    test "clears everything previously stored in session", %{conn: conn} do
-      conn = conn |> put_session(:to_be_removed, "value") |> MagicAuth.log_in("user@example.com")
+    test "clears everything previously stored in session", %{conn: conn, code: code, email: email} do
+      conn = conn |> put_session(:to_be_removed, "value") |> MagicAuth.log_in(email, code)
       refute get_session(conn, :to_be_removed)
     end
 
-    test "redirects to configured path", %{conn: conn} do
-      conn = conn |> put_session(:session_return_to, "/hello") |> MagicAuth.log_in("user@example.com")
+    test "redirects to configured path", %{conn: conn, code: code, email: email} do
+      conn = conn |> put_session(:session_return_to, "/hello") |> MagicAuth.log_in(email, code)
       assert redirected_to(conn) == "/hello"
     end
 
-    test "writes a cookie when remember_me is configured", %{conn: conn} do
-      conn = conn |> fetch_cookies() |> MagicAuth.log_in("user@example.com")
+    test "writes a cookie when remember_me is configured", %{conn: conn, code: code, email: email} do
+      conn = conn |> fetch_cookies() |> MagicAuth.log_in(email, code)
       assert get_session(conn, :session_token) == conn.cookies[MagicAuth.Config.remember_me_cookie()]
 
       assert %{value: signed_token, max_age: max_age} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
@@ -271,16 +274,16 @@ defmodule MagicAuthTest do
       assert max_age == 5_184_000
     end
 
-    test "does not write a cookie when remember_me is not configured", %{conn: conn} do
+    test "does not write a cookie when remember_me is not configured", %{conn: conn, code: code, email: email} do
       Application.put_env(:magic_auth, :remember_me, false)
-      conn = conn |> fetch_cookies() |> MagicAuth.log_in("user@example.com")
+      conn = conn |> fetch_cookies() |> MagicAuth.log_in(email, code)
       refute conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
       Application.put_env(:magic_auth, :remember_me, true)
     end
 
-    test "changes session validity to 90 days", %{conn: conn} do
+    test "changes session validity to 90 days", %{conn: conn, code: code, email: email} do
       Application.put_env(:magic_auth, :session_validity_in_days, 90)
-      conn = conn |> fetch_cookies() |> MagicAuth.log_in("user@example.com")
+      conn = conn |> fetch_cookies() |> MagicAuth.log_in(email, code)
 
       assert %{max_age: max_age} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
       # 90 days in seconds
@@ -289,24 +292,20 @@ defmodule MagicAuthTest do
       Application.put_env(:magic_auth, :session_validity_in_days, 60)
     end
 
-    test "redirects to signed_in when log_in_requested returns :allow", %{conn: conn} do
-      email = "user@example.com"
-
+    test "redirects to signed_in when log_in_requested returns :allow", %{conn: conn, code: code, email: email} do
       Mox.expect(MagicAuth.CallbacksMock, :log_in_requested, fn ^email -> :allow end)
 
-      conn = MagicAuth.log_in(conn, email)
+      conn = MagicAuth.log_in(conn, email, code)
 
       assert redirected_to(conn) == "/"
       assert get_session(conn, :session_token)
     end
 
-    test "redirects to log_in when log_in_requested returns :deny", %{conn: conn} do
-      email = "blocked@example.com"
-
+    test "redirects to log_in when log_in_requested returns :deny", %{conn: conn, code: code, email: email} do
       Mox.expect(MagicAuth.CallbacksMock, :log_in_requested, fn ^email -> :deny end)
       Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :access_denied, _opts -> "Access denied" end)
 
-      conn = conn |> fetch_flash() |> MagicAuth.log_in(email)
+      conn = conn |> fetch_flash() |> MagicAuth.log_in(email, code)
 
       assert redirected_to(conn) == MagicAuth.Config.router().__magic_auth__(:log_in)
       assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Access denied"
@@ -315,9 +314,8 @@ defmodule MagicAuthTest do
   end
 
   describe "get_session_by_token/1" do
-    test "returns the session when token is valid", %{conn: conn} do
-      email = "user@example.com"
-      conn = MagicAuth.log_in(conn, email)
+    test "returns the session when token is valid", %{conn: conn, code: code, email: email} do
+      conn = MagicAuth.log_in(conn, email, code)
       token = get_session(conn, :session_token)
 
       assert session = MagicAuth.get_session_by_token(token)
@@ -328,9 +326,8 @@ defmodule MagicAuthTest do
       assert MagicAuth.get_session_by_token("invalid_token") == nil
     end
 
-    test "returns nil when token is expired", %{conn: conn} do
-      email = "user@example.com"
-      conn = MagicAuth.log_in(conn, email)
+    test "returns nil when token is expired", %{conn: conn, code: code, email: email} do
+      conn = MagicAuth.log_in(conn, email, code)
       token = get_session(conn, :session_token)
 
       # Simulate a future date beyond validity period
@@ -433,10 +430,8 @@ defmodule MagicAuthTest do
       assert %Session{email: ^email} = conn.assigns.current_user_session
     end
 
-    test "loads session from remember_me cookie when there is no session token", %{conn: conn} do
-      email = "test@example.com"
-
-      conn = MagicAuth.log_in(conn, email)
+    test "loads session from remember_me cookie when there is no session token", %{conn: conn, email: email, code: code} do
+      conn = MagicAuth.log_in(conn, email, code)
       conn = MagicAuth.fetch_current_user_session(conn, [])
 
       assert %Session{email: ^email} = conn.assigns.current_user_session

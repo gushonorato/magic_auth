@@ -40,7 +40,11 @@ defmodule MagicAuth.TokenBucket do
     div(reset_interval, 1000)
   end
 
-  def take(key, config) do
+  def take(key, config), do: take(key, config, MagicAuth.Config.rate_limit_enabled?())
+
+  defp take(_key, config, false), do: {:ok, config.tokens}
+
+  defp take(key, config, true) do
     case :ets.update_counter(config.table_name, key, -1, {key, config.tokens}) do
       count when count >= 0 ->
         {:ok, count}
