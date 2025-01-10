@@ -26,7 +26,7 @@ defmodule MagicAuth.PasswordLive do
         {:noreply, push_navigate(socket, to: redirect_to)}
 
       email ->
-        {:noreply, assign(socket, email: email, error: parse_error(params))}
+        {:noreply, assign(socket, email: email, error: parse_error(params), rate_limited?: rate_limited?(email))}
     end
   end
 
@@ -55,6 +55,25 @@ defmodule MagicAuth.PasswordLive do
     end
   end
 
+  def handle_event("resend_code", _params, socket) do
+    %{email: email} = socket.assigns
+
+    case MagicAuth.create_one_time_password(%{"email" => email}) do
+      {:ok, _code, _one_time_password} ->
+        message = MagicAuth.Config.callback_module().translate_error(:code_resent, [])
+        socket = socket |> assign(rate_limited?: rate_limited?(email)) |> put_flash(:info, message)
+        {:noreply, socket}
+
+      {:error, :rate_limited, countdown} ->
+        error_message =
+          MagicAuth.Config.callback_module().translate_error(:too_many_one_time_password_requests,
+            countdown: div(countdown, 1000)
+          )
+
+        {:noreply, put_flash(socket, :error, error_message)}
+    end
+  end
+
   def verify_form(assigns) do
     module = MagicAuth.Config.callback_module()
     apply(module, :verify_form, [assigns])
@@ -62,11 +81,23 @@ defmodule MagicAuth.PasswordLive do
 
   def render(assigns) do
     ~H"""
-    <.verify_form form={@form} email={@email} error={@error} flash={@flash} countdown={@countdown} />
+    <.verify_form
+      form={@form}
+      email={@email}
+      error={@error}
+      flash={@flash}
+      countdown={@countdown}
+      rate_limited?={@rate_limited?}
+    />
     """
   end
 
   def handle_info({:countdown_updated, countdown}, socket) do
-    {:noreply, assign(socket, countdown: countdown)}
+    %{email: email} = socket.assigns
+    {:noreply, assign(socket, countdown: countdown, rate_limited?: rate_limited?(email))}
+  end
+
+  def rate_limited?(email) do
+    OneTimePasswordRequestTokenBucket.count(email) <= 0
   end
 end

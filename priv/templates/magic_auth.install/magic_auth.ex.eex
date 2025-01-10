@@ -79,10 +79,12 @@ defmodule <%= @web_module %>.MagicAuth do
     """
   end
 
-  attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the One Time Password code"
+    attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the One Time Password code"
   attr :error, :string, required: true, doc: "error message to display if verification fails"
   attr :flash, :map, required: true, doc: "the flash messages to display"
   attr :email, :string, required: true, doc: "the user's email to which the code was sent"
+  attr :rate_limited?, :boolean, required: true, doc: "whether the email is rate limited"
+  attr :countdown, :integer, required: true, doc: "the countdown to reset rate limit"
 
   @doc """
   Renders the verification form displayed at `/sessions/verify` where users can enter
@@ -114,20 +116,30 @@ defmodule <%= @web_module %>.MagicAuth do
         <.form for={@form} phx-change="verify" class="mt-8 space-y-6">
           <div class="rounded-md -space-y-px">
             <div>
-              <.one_time_password_input field={@form[:password]} error={@error}/>
+              <.one_time_password_input field={@form[:password]} error={@error} />
             </div>
           </div>
 
           <div class="text-center">
-            <p class="text-sm text-gray-600">
+            <p class="text-sm text-gray-700 font-medium">
               {gettext("Didn't receive the code?")}
-              <button
-                type="button"
-                phx-click="resend_code"
-                class="ml-1 font-medium text-indigo-600 hover:text-indigo-500"
-              >
-                {gettext("Resend")}
-              </button>
+              <%%= if @rate_limited? do %>
+                <p class="text-sm text-gray-600">
+                  {gettext("Please wait %{countdown} seconds to request a new code",
+                    countdown: @countdown
+                  )}
+                </p>
+              <%% else %>
+                <div class="flex justify-center">
+                  <button
+                    type="button"
+                    phx-click="resend_code"
+                    class="font-medium text-sm text-indigo-600 hover:text-indigo-500"
+                  >
+                    {gettext("Resend")}
+                  </button>
+                </div>
+              <%% end %>
             </p>
           </div>
         </.form>
@@ -311,4 +323,5 @@ defmodule <%= @web_module %>.MagicAuth do
   def translate_error(:access_denied, _opts), do: "You don't have permission to access this page."
   def translate_error(:too_many_one_time_password_requests, opts),
     do: "Too many requests. Wait #{opts[:countdown]} seconds to request a new code."
+  def translate_error(:code_resent, _opts), do: "Code resent"
 end
