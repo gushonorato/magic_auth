@@ -24,9 +24,17 @@ defmodule MagicAuth.LoginLive do
 
   def handle_event("login", %{"auth" => attrs}, socket) do
     case MagicAuth.create_one_time_password(attrs) do
-      {:ok, {_code, one_time_password}} ->
+      {:ok, _code, one_time_password} ->
         path = MagicAuth.Config.router().__magic_auth__(:password, %{email: one_time_password.email})
         {:noreply, push_navigate(socket, to: path)}
+
+      {:error, :rate_limited, countdown} ->
+        error_message =
+          MagicAuth.Config.callback_module().translate_error(:too_many_one_time_password_requests,
+            countdown: div(countdown, 1000)
+          )
+
+        {:noreply, put_flash(socket, :error, error_message)}
 
       {:error, changeset} ->
         form = changeset |> Map.put(:action, :log_in) |> to_auth_form()

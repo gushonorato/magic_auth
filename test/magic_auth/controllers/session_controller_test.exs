@@ -50,7 +50,7 @@ defmodule MagicAuth.SessionControllerTest do
     end
 
     test "redirects with error when code is expired", %{conn: conn, email: email} do
-      {:ok, {code, one_time_password}} = MagicAuth.create_one_time_password(%{"email" => email})
+      {:ok, code, one_time_password} = MagicAuth.create_one_time_password(%{"email" => email})
 
       one_time_password
       |> Ecto.Changeset.change(%{
@@ -69,7 +69,7 @@ defmodule MagicAuth.SessionControllerTest do
 
     test "logs in when code is valid", %{conn: conn, email: email} do
       Mox.stub(MagicAuth.CallbacksMock, :log_in_requested, fn _email -> :allow end)
-      {:ok, {code, _one_time_password}} = MagicAuth.create_one_time_password(%{"email" => email})
+      {:ok, code, _one_time_password} = MagicAuth.create_one_time_password(%{"email" => email})
 
       conn =
         get(conn, Router.__magic_auth__(:verify), %{

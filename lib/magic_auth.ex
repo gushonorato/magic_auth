@@ -28,14 +28,15 @@ defmodule MagicAuth do
 
   ## Returns
 
-    * `{:ok, one_time_password}` - Returns the created one_time_password on success
+    * `{:ok, code, one_time_password}` - Returns the created one_time_password on success
     * `{:error, changeset}` - Returns the changeset with errors if validation fails
     * `{:error, failed_value}` - Returns the failed value if the transaction fails
+    * `{:error, :rate_limited, countdown}` - Returns the countdown if the rate limit is exceeded
 
   ## Examples
 
       iex> MagicAuth.create_one_time_password(%{"email" => "user@example.com"})
-      {:ok, {code, %MagicAuth.OneTimePassword{}}}
+      {:ok, code, %MagicAuth.OneTimePassword{}}
 
   The one time password length can be configured in config/config.exs:
 
@@ -74,7 +75,7 @@ defmodule MagicAuth do
         do_create_one_time_password(changeset)
 
       {:error, :rate_limited} ->
-        {:error, :rate_limited}
+        {:error, :rate_limited, OneTimePasswordRequestTokenBucket.get_countdown()}
     end
   end
 
@@ -93,7 +94,7 @@ defmodule MagicAuth do
     |> case do
       {:ok, %{insert_one_time_passwords: one_time_password}} ->
         MagicAuth.Config.callback_module().one_time_password_requested(code, one_time_password)
-        {:ok, {code, one_time_password}}
+        {:ok, code, one_time_password}
 
       {:error, _failed_operation, failed_value, _changes_so_far} ->
         {:error, failed_value}

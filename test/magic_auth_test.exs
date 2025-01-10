@@ -40,7 +40,7 @@ defmodule MagicAuthTest do
   describe "create_one_time_password/1" do
     test "generates valid one-time password with valid email" do
       email = "user@example.com"
-      {:ok, {_code, token}} = MagicAuth.create_one_time_password(%{"email" => email})
+      {:ok, _code, token} = MagicAuth.create_one_time_password(%{"email" => email})
 
       assert token.email == email
       assert String.length(token.hashed_password) > 0
@@ -53,8 +53,8 @@ defmodule MagicAuthTest do
 
     test "removes existing tokens before creating a new one" do
       email = "user@example.com"
-      {:ok, {_code1, _token1}} = MagicAuth.create_one_time_password(%{"email" => email})
-      {:ok, {_code2, token2}} = MagicAuth.create_one_time_password(%{"email" => email})
+      {:ok, _code1, _token1} = MagicAuth.create_one_time_password(%{"email" => email})
+      {:ok, _code2, token2} = MagicAuth.create_one_time_password(%{"email" => email})
 
       tokens = MagicAuthTest.Repo.all(OneTimePassword)
       assert length(tokens) == 1
@@ -65,9 +65,9 @@ defmodule MagicAuthTest do
       email1 = "user1@example.com"
       email2 = "user2@example.com"
 
-      {:ok, {_code1, one_time_password1}} = MagicAuth.create_one_time_password(%{"email" => email1})
-      {:ok, {_code2, one_time_password2}} = MagicAuth.create_one_time_password(%{"email" => email2})
-      {:ok, {_code3, new_one_time_password1}} = MagicAuth.create_one_time_password(%{"email" => email1})
+      {:ok, _code1, one_time_password1} = MagicAuth.create_one_time_password(%{"email" => email1})
+      {:ok, _code2, one_time_password2} = MagicAuth.create_one_time_password(%{"email" => email2})
+      {:ok, _code3, new_one_time_password1} = MagicAuth.create_one_time_password(%{"email" => email1})
 
       one_time_passwords = MagicAuthTest.Repo.all(OneTimePassword)
       assert length(one_time_passwords) == 2
@@ -77,7 +77,7 @@ defmodule MagicAuthTest do
     end
 
     test "stores token value as bcrypt hash" do
-      {:ok, {_code, token}} = MagicAuth.create_one_time_password(%{"email" => "user@example.com"})
+      {:ok, _code, token} = MagicAuth.create_one_time_password(%{"email" => "user@example.com"})
 
       # Verify hashed_password starts with "$2b$" which is the bcrypt hash identifier
       assert String.starts_with?(token.hashed_password, "$2b$")
@@ -93,7 +93,7 @@ defmodule MagicAuthTest do
         :ok
       end)
 
-      {:ok, {_code, _token}} = MagicAuth.create_one_time_password(%{"email" => email})
+      {:ok, _code, _token} = MagicAuth.create_one_time_password(%{"email" => email})
     end
 
     test "returns error when rate limit is reached" do
@@ -102,8 +102,8 @@ defmodule MagicAuthTest do
 
       email = "user@example.com"
 
-      assert {:ok, {_code, _token}} = MagicAuth.create_one_time_password(%{"email" => email})
-      assert {:error, :rate_limited} = MagicAuth.create_one_time_password(%{"email" => email})
+      assert {:ok, _code, _token} = MagicAuth.create_one_time_password(%{"email" => email})
+      assert {:error, :rate_limited, _countdown} = MagicAuth.create_one_time_password(%{"email" => email})
 
       Application.delete_env(:magic_auth, :enable_rate_limit)
       stop_supervised!(MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket)
@@ -304,7 +304,7 @@ defmodule MagicAuthTest do
       email = "blocked@example.com"
 
       Mox.expect(MagicAuth.CallbacksMock, :log_in_requested, fn ^email -> :deny end)
-      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :access_denied -> "Access denied" end)
+      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :access_denied, _opts -> "Access denied" end)
 
       conn = conn |> fetch_flash() |> MagicAuth.log_in(email)
 
@@ -395,7 +395,7 @@ defmodule MagicAuthTest do
 
   describe "require_authenticated/2" do
     test "redirects when not authenticated", %{conn: conn} do
-      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :unauthorized ->
+      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :unauthorized, _opts ->
         "You must log in to access this page."
       end)
 
@@ -492,7 +492,7 @@ defmodule MagicAuthTest do
 
   describe "on_mount :require_authenticated" do
     test "redirects when not authenticated" do
-      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :unauthorized ->
+      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :unauthorized, _opts ->
         "You must log in to access this page."
       end)
 
