@@ -61,7 +61,9 @@ defmodule MagicAuth.TokenBucket do
   end
 
   def handle_info(:update_countdown, state) do
-    countdown = state.countdown - :timer.seconds(1)
+    %{countdown: countdown} = state
+
+    countdown = if countdown > 0, do: countdown - :timer.seconds(1), else: countdown
 
     Enum.each(state.subscribers, fn pid ->
       send(pid, {:countdown_updated, countdown})
