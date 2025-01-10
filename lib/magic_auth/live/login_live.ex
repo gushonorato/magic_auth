@@ -31,7 +31,7 @@ defmodule MagicAuth.LoginLive do
       {:error, :rate_limited, countdown} ->
         error_message =
           MagicAuth.Config.callback_module().translate_error(:too_many_one_time_password_requests,
-            countdown: div(countdown, 1000)
+            countdown: countdown
           )
 
         {:noreply, put_flash(socket, :error, error_message)}
