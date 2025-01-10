@@ -69,10 +69,14 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert content =~ "def verify_form(assigns) do"
     assert content =~ "defp one_time_password_input(assigns) do"
     assert content =~ "def log_in_requested(_email), do: :allow"
-    assert content =~ "def translate_error(:invalid_code), do: \"Invalid code\""
-    assert content =~ "def translate_error(:code_expired), do: \"Code expired\""
-    assert content =~ "def translate_error(:unauthorized), do: \"You need to log in to access this page.\""
-    assert content =~ "def translate_error(:access_denied), do: \"You don't have permission to access this page.\""
+    assert content =~ "def translate_error(:invalid_code, _opts), do: \"Invalid code\""
+    assert content =~ "def translate_error(:code_expired, _opts), do: \"Code expired\""
+    assert content =~ "def translate_error(:unauthorized, _opts), do: \"You need to log in to access this page.\""
+
+    assert content =~
+             "def translate_error(:access_denied, _opts), do: \"You don't have permission to access this page.\""
+
+    assert content =~ "def translate_error(:too_many_one_time_password_requests, opts)"
   end
 
   test "injects configuration into config.exs" do

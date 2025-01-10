@@ -146,7 +146,7 @@ defmodule MagicAuth do
 
       :deny ->
         conn
-        |> put_flash(:error, MagicAuth.Config.callback_module().translate_error(:access_denied))
+        |> put_flash(:error, MagicAuth.Config.callback_module().translate_error(:access_denied, []))
         |> redirect(to: MagicAuth.Config.router().__magic_auth__(:log_in))
     end
   end
@@ -283,7 +283,7 @@ defmodule MagicAuth do
       conn
     else
       conn
-      |> put_flash(:error, MagicAuth.Config.callback_module().translate_error(:unauthorized))
+      |> put_flash(:error, MagicAuth.Config.callback_module().translate_error(:unauthorized, []))
       |> maybe_store_return_to()
       |> redirect(to: MagicAuth.Config.router().__magic_auth__(:log_in))
       |> halt()
@@ -321,7 +321,7 @@ defmodule MagicAuth do
     else
       socket =
         socket
-        |> Phoenix.LiveView.put_flash(:error, MagicAuth.Config.callback_module().translate_error(:unauthorized))
+        |> Phoenix.LiveView.put_flash(:error, MagicAuth.Config.callback_module().translate_error(:unauthorized, []))
         |> Phoenix.LiveView.redirect(to: MagicAuth.Config.router().__magic_auth__(:log_in))
 
       {:halt, socket}
