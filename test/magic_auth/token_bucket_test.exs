@@ -125,4 +125,13 @@ defmodule MagicAuth.TokenBucketTest do
       assert is_integer(countdown)
     end
   end
+
+  describe "get_countdown/0" do
+    @tag :slow
+    test "returns remaining time in milliseconds and decreases over time" do
+      countdown = LoginAttemptsTokenBucket.get_countdown()
+      Process.sleep(1_100)
+      assert countdown > LoginAttemptsTokenBucket.get_countdown()
+    end
+  end
 end

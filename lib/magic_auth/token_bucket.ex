@@ -26,8 +26,10 @@ defmodule MagicAuth.TokenBucket do
 
       defdelegate handle_info(message, state), to: MagicAuth.TokenBucket
       defdelegate handle_cast(message, state), to: MagicAuth.TokenBucket
+      defdelegate handle_call(message, from, state), to: MagicAuth.TokenBucket
 
       def subscribe(pid \\ self()), do: GenServer.cast(unquote(__MODULE__), {:subscribe, pid})
+      def get_countdown(), do: GenServer.call(unquote(__MODULE__), :get_countdown)
       def take(key), do: MagicAuth.TokenBucket.take(key, config())
       def count(key), do: MagicAuth.TokenBucket.count(key, config())
     end
@@ -70,5 +72,9 @@ defmodule MagicAuth.TokenBucket do
 
   def handle_cast({:subscribe, called_pid}, state) do
     {:noreply, %{state | subscribers: [called_pid | state.subscribers]}}
+  end
+
+  def handle_call(:get_countdown, _from, state) do
+    {:reply, state.countdown, state}
   end
 end
