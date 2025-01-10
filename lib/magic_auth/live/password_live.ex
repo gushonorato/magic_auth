@@ -1,9 +1,20 @@
 defmodule MagicAuth.PasswordLive do
   use Phoenix.LiveView
   alias MagicAuth.OneTimePassword
+  alias MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket
 
   def mount(_params, _one_time_password, socket) do
-    {:ok, assign(socket, form: to_password_form(nil), email: nil, error: nil)}
+    if connected?(socket) do
+      OneTimePasswordRequestTokenBucket.subscribe()
+    end
+
+    {:ok,
+     assign(socket,
+       form: to_password_form(nil),
+       email: nil,
+       error: nil,
+       countdown: OneTimePasswordRequestTokenBucket.get_countdown()
+     )}
   end
 
   defp to_password_form(password), do: to_form(%{"password" => password}, as: "auth")
@@ -51,7 +62,11 @@ defmodule MagicAuth.PasswordLive do
 
   def render(assigns) do
     ~H"""
-    <.verify_form form={@form} email={@email} error={@error} flash={@flash} />
+    <.verify_form form={@form} email={@email} error={@error} flash={@flash} countdown={@countdown} />
     """
+  end
+
+  def handle_info({:countdown_updated, countdown}, socket) do
+    {:noreply, assign(socket, countdown: countdown)}
   end
 end

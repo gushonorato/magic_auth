@@ -17,13 +17,7 @@ defmodule MagicAuth.TokenBucket do
         GenServer.start_link(unquote(__MODULE__), config(), name: unquote(__MODULE__))
       end
 
-      def init(config) do
-        :ets.new(config.table_name, [:set, :named_table, :public])
-        {:ok, _reset_timer} = :timer.send_interval(config.reset_interval, :reset)
-        {:ok, _countdown_timer} = :timer.send_interval(:timer.seconds(1), :update_countdown)
-        {:ok, %{config: config, countdown: config.reset_interval, subscribers: []}}
-      end
-
+      defdelegate init(config), to: MagicAuth.TokenBucket
       defdelegate handle_info(message, state), to: MagicAuth.TokenBucket
       defdelegate handle_cast(message, state), to: MagicAuth.TokenBucket
       defdelegate handle_call(message, from, state), to: MagicAuth.TokenBucket
@@ -33,6 +27,17 @@ defmodule MagicAuth.TokenBucket do
       def take(key), do: MagicAuth.TokenBucket.take(key, config())
       def count(key), do: MagicAuth.TokenBucket.count(key, config())
     end
+  end
+
+  def init(config) do
+    :ets.new(config.table_name, [:set, :named_table, :public])
+    {:ok, _reset_timer} = :timer.send_interval(config.reset_interval, :reset)
+    {:ok, _countdown_timer} = :timer.send_interval(:timer.seconds(1), :update_countdown)
+    {:ok, %{config: config, countdown: reset_countdown(config), subscribers: []}}
+  end
+
+  defp reset_countdown(%{reset_interval: reset_interval}) do
+    div(reset_interval, 1000)
   end
 
   def take(key, config) do
@@ -57,13 +62,13 @@ defmodule MagicAuth.TokenBucket do
     %{config: %{table_name: table_name}} = state
     :ets.delete_all_objects(table_name)
 
-    {:noreply, %{state | countdown: state.config.reset_interval}}
+    {:noreply, %{state | countdown: reset_countdown(state.config)}}
   end
 
   def handle_info(:update_countdown, state) do
     %{countdown: countdown} = state
 
-    countdown = if countdown > 0, do: countdown - :timer.seconds(1), else: countdown
+    countdown = if countdown > 0, do: countdown - 1, else: countdown
 
     Enum.each(state.subscribers, fn pid ->
       send(pid, {:countdown_updated, countdown})

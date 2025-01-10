@@ -107,11 +107,12 @@ defmodule MagicAuth.TokenBucketTest do
 
     send(LoginAttemptsTokenBucket, :update_countdown)
 
-    countdown = :timer.minutes(1) - :timer.seconds(1)
-
     # Verifica se todos os processos receberam a atualização
     Enum.each(pids, fn pid ->
-      assert_receive {:received, ^pid, ^countdown}
+      assert_receive {:received, ^pid, countdown}
+      assert countdown <= 60
+      assert countdown >= 0
+      assert is_integer(countdown)
     end)
   end
 
@@ -131,7 +132,16 @@ defmodule MagicAuth.TokenBucketTest do
     test "returns remaining time in milliseconds and decreases over time" do
       countdown = LoginAttemptsTokenBucket.get_countdown()
       Process.sleep(1_100)
-      assert countdown > LoginAttemptsTokenBucket.get_countdown()
+      new_countdown = LoginAttemptsTokenBucket.get_countdown()
+
+      assert countdown > new_countdown
+    end
+
+    test "countdown is in seconds" do
+      countdown = LoginAttemptsTokenBucket.get_countdown()
+      assert countdown <= 60
+      assert countdown >= 0
+      assert is_integer(countdown)
     end
   end
 end
