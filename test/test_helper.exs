@@ -8,3 +8,5 @@ Application.put_env(:magic_auth_test, MagicAuthTestWeb.Endpoint, [])
 {:ok, _} = MagicAuthTestWeb.Endpoint.start_link()
 
 Ecto.Adapters.SQL.Sandbox.mode(MagicAuthTest.Repo, :manual)
+
+Mix.shell(Mix.Shell.Process)
