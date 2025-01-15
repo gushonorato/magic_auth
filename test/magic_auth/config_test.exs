@@ -227,4 +227,40 @@ defmodule ConfigTest do
       end
     end
   end
+
+  describe "migrations_path/1" do
+    test "returns the correct migrations path" do
+      assert Config.migrations_path() == "priv/repo/migrations"
+    end
+
+    test "returns the correct migrations path when repo is configured" do
+      Application.put_env(:magic_auth, :repo, MagicAuthTest.AnotherRepo)
+      assert Config.migrations_path() == "priv/another_repo/migrations"
+    after
+      Application.delete_env(:magic_auth, :repo)
+    end
+
+    test "raises exception when context_app differs from otp_app and otp_app is not listed as in_umbrella" do
+      Application.put_env(:lero_lero_app, :generators, context_app: :other_app)
+      Application.put_env(:other_app, :ecto_repos, [MagicAuthTest.Repo])
+
+      assert_raise Mix.Error, ~r/no directory for context_app/, fn ->
+        Config.migrations_path()
+      end
+    after
+      Application.delete_env(:lero_lero_app, :generators)
+      Application.delete_env(:other_app, :ecto_repos)
+    end
+
+    test "returns correct migrations path when context_app has arbitrary path" do
+      Application.put_env(:lero_lero_app, :generators, context_app: {:other_app, "apps/another_arbitrary_path"})
+      Application.put_env(:other_app, :ecto_repos, [MagicAuthTest.Repo])
+
+      assert Config.migrations_path() == "apps/another_arbitrary_path/priv/repo/migrations"
+    after
+      Application.delete_env(:lero_lero_app, :generators)
+      Application.delete_env(:other_app, :ecto_repos)
+    end
+
+  end
 end

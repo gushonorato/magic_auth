@@ -181,8 +181,15 @@ defmodule MagicAuth.Config do
   end
 
   def migrations_path(rel \\ "") do
-    repo_path = repo_module() |> to_string() |> String.replace_prefix("Elixir.", "") |> Macro.underscore()
-    Path.join([context_app_path(context_app(), "priv"), repo_path, "migrations", rel])
+    repo_path =
+      repo_module()
+      |> to_string()
+      |> String.replace_prefix("Elixir.", "")
+      |> String.split(".")
+      |> List.last()
+      |> Macro.underscore()
+
+    context_app_path(context_app(), Path.join(["priv", repo_path, "migrations", rel]))
   end
 
   def callback_module do
