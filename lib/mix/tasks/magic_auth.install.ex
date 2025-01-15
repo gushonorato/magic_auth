@@ -24,7 +24,8 @@ defmodule Mix.Tasks.MagicAuth.Install do
         |> web_module()
         |> to_string()
         |> String.replace_prefix("Elixir.", ""),
-      router_file_path: Path.join(["lib", "#{otp_app()}_web", "router.ex"])
+      router_file_path: Path.join(["lib", "#{otp_app()}_web", "router.ex"]),
+      application_file_path: MagicAuth.Config.context_app() |> MagicAuth.Config.context_app_path("application.ex")
     }
   end
 
@@ -32,6 +33,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
     install_magic_token_migration_file(assigns)
     install_magic_auth_callbacks(assigns)
     inject_router(assigns)
+    install_token_buckets(assigns)
 
     Mix.shell().info("""
 
@@ -145,5 +147,37 @@ defmodule Mix.Tasks.MagicAuth.Install do
 
   def fetch_current_user_session_plug_installed?(router_file_content) do
     String.contains?(router_file_content, "plug :fetch_current_user_session")
+  end
+
+  defp install_token_buckets(assigns) do
+    Mix.shell().info(IO.ANSI.cyan() <> "* injecting " <> IO.ANSI.reset() <> "#{assigns.application_file_path}")
+    application_file_content = File.read!(assigns.application_file_path)
+
+    unless token_bucket_installed?(application_file_content) do
+      case Regex.run(~r/children = \[.*\s\s\s\s\]\n/Us, application_file_content, return: :index) do
+        [{index, length}] ->
+          {prelude, postlude} = String.split_at(application_file_content, index + length)
+
+          changed_application_file_content =
+            prelude <> "    children = children ++ MagicAuth.supervised_children()\n" <> postlude
+
+          File.write!(assigns.application_file_path, changed_application_file_content)
+
+        _not_found ->
+          Mix.shell().info("""
+          The task was unable to add some configuration to your application.ex. You should manually add the following code to your application.ex file to complete the setup:
+
+          children = [
+            # add this after the other children
+            MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket,
+            MagicAuth.TokenBuckets.LoginAttemptTokenBucket,
+          ]
+          """)
+      end
+    end
+  end
+
+  defp token_bucket_installed?(application_file_content) do
+    String.contains?(application_file_content, "MagicAuth.supervised_children")
   end
 end

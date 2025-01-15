@@ -37,18 +37,36 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       end
     """)
 
+    application_file_path = MagicAuth.Config.context_app() |> MagicAuth.Config.context_app_path("application.ex")
+
+    File.write!(application_file_path, """
+    defmodule MagicAuthExample.Application do
+      def start(_type, _args) do
+        children = [
+          MagicAuthExample.Repo,
+          MagicAuthExampleWeb.Endpoint
+        ]
+
+        opts = [strategy: :one_for_one, name: MagicAuthExample.Supervisor]
+        Supervisor.start_link(children, opts)
+      end
+    end
+    """)
+
     on_exit(fn ->
       teardown_tmp_dir(tmp)
     end)
 
-    %{web_path: web_path, router_file_path: router_file_path}
+    %{web_path: web_path, router_file_path: router_file_path, application_file_path: application_file_path}
   end
 
   test "displays success message" do
     Mix.shell(Mix.Shell.IO)
-    output = capture_io(fn ->
-      run([])
-    end)
+
+    output =
+      capture_io(fn ->
+        run([])
+      end)
 
     assert output =~ "Magic Auth installed successfully!"
   after
@@ -206,7 +224,83 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     assert output =~ "The task was unable to add some configuration to your router.ex"
     assert output =~ "You should manually add the following code to your router.ex"
+  after
+    Mix.shell(Mix.Shell.Process)
+  end
 
+  test "installs token buckets configuration", %{application_file_path: application_file_path} do
+    Mix.shell(Mix.Shell.IO)
+
+    capture_io(fn ->
+      run([])
+    end)
+
+    content = File.read!(application_file_path)
+
+    assert content == """
+           defmodule MagicAuthExample.Application do
+             def start(_type, _args) do
+               children = [
+                 MagicAuthExample.Repo,
+                 MagicAuthExampleWeb.Endpoint
+               ]
+               children = children ++ MagicAuth.supervised_children()
+
+               opts = [strategy: :one_for_one, name: MagicAuthExample.Supervisor]
+               Supervisor.start_link(children, opts)
+             end
+           end
+           """
+  end
+
+  test "does not duplicate token buckets configuration if already present", %{
+    application_file_path: application_file_path
+  } do
+    File.rm!(application_file_path)
+
+    File.write!(application_file_path, """
+    defmodule MagicAuthExample.Application do
+      def start(_type, _args) do
+        children = [
+          MagicAuthExample.Repo,
+          MagicAuthExampleWeb.Endpoint
+        ]
+
+        children = children ++ MagicAuth.supervised_children()
+
+        opts = [strategy: :one_for_one, name: MagicAuthExample.Supervisor]
+        Supervisor.start_link(children, opts)
+      end
+    end
+    """)
+
+    initial_content = File.read!(application_file_path)
+
+    run([])
+
+    final_content = File.read!(application_file_path)
+    assert initial_content == final_content
+  end
+
+  test "displays error message when unable to inject token buckets configuration", %{
+    application_file_path: application_file_path
+  } do
+    Mix.shell(Mix.Shell.IO)
+    File.rm_rf!(application_file_path)
+
+    File.write!(application_file_path, """
+    defmodule MagicAuthExample.Application do
+      # Different format than expected
+    end
+    """)
+
+    output =
+      capture_io(fn ->
+        run([])
+      end)
+
+    assert output =~ "The task was unable to add some configuration to your application.ex"
+    assert output =~ "You should manually add the following code to your application.ex"
   after
     Mix.shell(Mix.Shell.Process)
   end
