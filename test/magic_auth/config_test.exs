@@ -4,7 +4,8 @@ defmodule ConfigTest do
   alias MagicAuth.Config
 
   setup do
-    Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
+    app = :lero_lero_app
+    Application.put_env(:magic_auth, :otp_app, app)
     Application.put_env(:lero_lero_app, :ecto_repos, [MagicAuthTest.Repo])
 
     on_exit(fn ->
@@ -12,7 +13,7 @@ defmodule ConfigTest do
       Application.delete_env(:lero_lero_app, :ecto_repos)
     end)
 
-    :ok
+    %{app: app}
   end
 
   describe "one_time_password_length/0" do
@@ -40,25 +41,6 @@ defmodule ConfigTest do
     end
   end
 
-  describe "otp_app_module/0" do
-    test "returns the application module name correctly" do
-      Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
-      assert Config.otp_app_module() == LeroLeroApp
-    end
-  end
-
-  describe "web_module_name/0" do
-    test "returns the Web module when otp_app doesn't end with Web" do
-      Application.put_env(:magic_auth, :otp_app, :lero_lero_app)
-      assert Config.web_module() === LeroLeroAppWeb
-    end
-
-    test "returns the module directly when it already ends with Web" do
-      Application.put_env(:magic_auth, :otp_app, :lero_lero_app_web)
-      assert Config.web_module() === LeroLeroAppWeb
-    end
-  end
-
   describe "repo_module/0" do
     test "returns the configured repo when explicitly defined" do
       Application.put_env(:magic_auth, :repo, MagicAuthTest.Repo)
@@ -74,16 +56,6 @@ defmodule ConfigTest do
       assert Config.repo_module() == MagicAuthTest.AnotherRepo
 
       Application.delete_env(:lero_lero_app, :ecto_repos)
-    end
-  end
-
-  describe "repo_module_name/0" do
-    test "returns the repository module name as string without Elixir prefix" do
-      Application.put_env(:magic_auth, :repo, MyApp.Repo)
-
-      assert Config.repo_module_name() == "MyApp.Repo"
-
-      Application.delete_env(:magic_auth, :repo)
     end
   end
 
@@ -200,6 +172,59 @@ defmodule ConfigTest do
       on_exit(fn ->
         Application.delete_env(:magic_auth, :enable_rate_limit)
       end)
+    end
+  end
+
+  describe "base/0" do
+    test "returns the configured namespace when defined" do
+      Application.put_env(:lero_lero_app, :namespace, MyApp.Namespace)
+
+      assert MagicAuth.Config.base() == "MyApp.Namespace"
+    after
+      Application.delete_env(:lero_lero_app, :namespace)
+    end
+
+    test "returns the camelized app name when namespace is not defined" do
+      assert MagicAuth.Config.base() == "LeroLeroApp"
+    end
+  end
+
+  describe "web_path/2" do
+    test "returns the correct web path when ctx_app is equal to the current app" do
+      assert MagicAuth.Config.web_path(:lero_lero_app) == "lib/lero_lero_app_web"
+      assert MagicAuth.Config.web_path(:lero_lero_app, "controllers") == "lib/lero_lero_app_web/controllers"
+    end
+
+    test "returns the correct web path when ctx_app is different from the current app" do
+      assert MagicAuth.Config.web_path(:other_app) == "lib/lero_lero_app"
+      assert MagicAuth.Config.web_path(:other_app, "controllers") == "lib/lero_lero_app/controllers"
+    end
+  end
+
+  describe "context_app_path/2" do
+    test "returns rel_path when ctx_app is equal to the current app", %{app: app} do
+      assert Config.context_app_path(app, "some/path") == "some/path"
+    end
+
+    test "uses configured path when context_app is configured with a tuple", %{app: app} do
+      other_app = :other_app
+
+      Application.put_env(app, :generators, context_app: {:other_app, "apps/other_app"})
+      Application.put_env(:other_app, :ecto_repos, [MagicAuthTest.Repo])
+
+      assert Config.context_app_path(other_app, "") == "apps/other_app"
+    after
+      File.rm_rf!("apps/other_app")
+      Application.delete_env(app, :generators)
+      Application.delete_env(:other_app, :ecto_repos)
+    end
+
+    test "raises an error when ctx_app is not in the deps" do
+      non_existing_app = :non_existing_app
+
+      assert_raise Mix.Error, ~r/no directory for context_app/, fn ->
+        Config.context_app_path(non_existing_app, "some/path")
+      end
     end
   end
 end
