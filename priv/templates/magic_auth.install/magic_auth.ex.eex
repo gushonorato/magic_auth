@@ -203,7 +203,7 @@ defmodule <%= @web_module %>.MagicAuth do
     |> Swoosh.Email.subject("Your access code")
     |> Swoosh.Email.text_body(text_email_body(code))
     |> Swoosh.Email.html_body(html_email_body(code))
-    |> MagicAuthExample.Mailer.deliver()
+    |> <%= @base %>.Mailer.deliver()
   end
 
 

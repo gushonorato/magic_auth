@@ -105,6 +105,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     content = File.read!(callbacks_file)
     assert content =~ "defmodule MagicAuthExampleWeb.MagicAuth"
+    assert content =~ "MagicAuthExample.Mailer"
     assert content =~ "use MagicAuthExampleWeb, :html"
     assert content =~ "def log_in_form(assigns) do"
     assert content =~ "def verify_form(assigns) do"
