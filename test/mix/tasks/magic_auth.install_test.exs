@@ -17,17 +17,48 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       import Config
     """)
 
+    web_path = MagicAuth.Config.web_path(MagicAuth.Config.context_app())
+    File.mkdir_p!(web_path)
+
+    router_file_path = Path.join(web_path, "router.ex")
+
+    File.write!(router_file_path, """
+      defmodule MagicAuthExampleWeb.Router do
+        use MagicAuthExampleWeb, :router
+
+        pipeline :browser do
+          plug :accepts, ["html"]
+          plug :fetch_session
+          plug :fetch_live_flash
+          plug :put_root_layout, html: {MagicAuthExampleWeb.Layouts, :root}
+          plug :protect_from_forgery
+          plug :put_secure_browser_headers
+        end
+      end
+    """)
+
     on_exit(fn ->
       teardown_tmp_dir(tmp)
     end)
 
-    :ok
+    %{web_path: web_path, router_file_path: router_file_path}
+  end
+
+  test "displays success message" do
+    Mix.shell(Mix.Shell.IO)
+    output = capture_io(fn ->
+      run([])
+    end)
+
+    assert output =~ "Magic Auth installed successfully!"
+  after
+    Mix.shell(Mix.Shell.Process)
   end
 
   test "creates migration file successfully" do
-      capture_io(fn ->
-        run([])
-      end)
+    capture_io(fn ->
+      run([])
+    end)
 
     assert File.dir?(MagicAuth.Config.migrations_path())
 
@@ -105,5 +136,78 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert_raise File.Error, ~r/could not read file/, fn ->
       run([])
     end
+  end
+
+  test "injects router configuration", %{router_file_path: router_file_path} do
+    File.write!(router_file_path, """
+    defmodule MagicAuthExampleWeb.Router do
+      use MagicAuthExampleWeb, :router
+
+      pipeline :browser do
+        plug :accepts, ["html"]
+        plug :fetch_session
+        plug :fetch_live_flash
+        plug :protect_from_forgery
+        plug :put_secure_browser_headers
+      end
+    end
+    """)
+
+    run([])
+
+    router_content = File.read!(router_file_path)
+
+    assert router_content =~ "use MagicAuth.Router"
+    assert router_content =~ "magic_auth()"
+    assert router_content =~ "plug :fetch_current_user_session"
+  end
+
+  test "does not duplicate router configuration if already present", %{router_file_path: router_file_path} do
+    File.write!(router_file_path, """
+    defmodule MagicAuthExampleWeb.Router do
+      use MagicAuthExampleWeb, :router
+      use MagicAuth.Router
+
+      magic_auth()
+
+      pipeline :browser do
+        plug :accepts, ["html"]
+        plug :fetch_session
+        plug :fetch_live_flash
+        plug :protect_from_forgery
+        plug :put_secure_browser_headers
+        plug :fetch_current_user_session
+      end
+    end
+    """)
+
+    initial_content = File.read!(router_file_path)
+
+    run([])
+
+    final_content = File.read!(router_file_path)
+    assert initial_content == final_content
+  end
+
+  test "displays error message when unable to inject router configuration", %{router_file_path: router_file_path} do
+    Mix.shell(Mix.Shell.IO)
+    File.rm_rf!(router_file_path)
+
+    File.write!(router_file_path, """
+    defmodule MagicAuthExampleWeb.Router do
+      # Different format than expected
+    end
+    """)
+
+    output =
+      capture_io(fn ->
+        run([])
+      end)
+
+    assert output =~ "The task was unable to add some configuration to your router.ex"
+    assert output =~ "You should manually add the following code to your router.ex"
+
+  after
+    Mix.shell(Mix.Shell.Process)
   end
 end

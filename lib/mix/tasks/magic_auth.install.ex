@@ -31,7 +31,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
   defp install(assigns) do
     install_magic_token_migration_file(assigns)
     install_magic_auth_callbacks(assigns)
-    # inject_router(assigns)
+    inject_router(assigns)
 
     Mix.shell().info("""
 
@@ -75,5 +75,75 @@ defmodule Mix.Tasks.MagicAuth.Install do
         config_content <> "\n\nconfig :magic_auth, otp_app: :#{assigns.app_name}"
       )
     end
+  end
+
+  defp inject_router(assigns) do
+    Mix.shell().info(IO.ANSI.cyan() <> "* injecting " <> IO.ANSI.reset() <> "#{assigns.router_file_path}")
+    inject_use_router(assigns)
+    inject_fetch_current_user_session_plug(assigns)
+  end
+
+  defp inject_use_router(assigns) do
+    router_file_content = File.read!(assigns.router_file_path)
+
+    unless check_if_use_router_already_installed(router_file_content) do
+      changed_router_file_content =
+        String.replace(
+          router_file_content,
+          ~r/use #{assigns.web_module}, :router/,
+          "use #{assigns.web_module}, :router\n  use MagicAuth.Router\n\n  magic_auth()"
+        )
+
+      if router_file_content == changed_router_file_content do
+        Mix.shell().info("""
+        The task was unable to add some configuration to your router.ex. You should manually add the following code to your router.ex file to complete the setup:
+
+        defmodule #{assigns.web_module}.Router do
+        use #{assigns.web_module}, :router
+        use MagicAuth.Router
+
+        magic_auth()
+        # ...
+        end
+        """)
+      else
+        File.write!(assigns.router_file_path, changed_router_file_content)
+      end
+    end
+  end
+
+  defp check_if_use_router_already_installed(router_file_content) do
+    String.contains?(router_file_content, "use MagicAuth.Router")
+  end
+
+  defp inject_fetch_current_user_session_plug(assigns) do
+    router_file_content = File.read!(assigns.router_file_path)
+
+    unless fetch_current_user_session_plug_installed?(router_file_content) do
+      case Regex.run(~r/pipeline :browser do(.*)end/Us, router_file_content, return: :index) do
+        [{_, _}, {_, index}] ->
+          changed_router_file_content =
+            router_file_content
+            |> String.split_at(index)
+            |> Tuple.to_list()
+            |> Enum.join("    plug :fetch_current_user_session\n")
+
+          File.write!(assigns.router_file_path, changed_router_file_content)
+
+        _not_found ->
+          Mix.shell().info("""
+          The task was unable to add some configuration to your router.ex. You should manually add the following code to your router.ex file to complete the setup:
+
+          pipeline :browser do
+            # add this after the other plugs
+            plug :fetch_current_user_session
+          end
+          """)
+      end
+    end
+  end
+
+  def fetch_current_user_session_plug_installed?(router_file_content) do
+    String.contains?(router_file_content, "plug :fetch_current_user_session")
   end
 end
