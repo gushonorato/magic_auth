@@ -25,7 +25,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
         |> to_string()
         |> String.replace_prefix("Elixir.", ""),
       router_file_path: Path.join(["lib", "#{otp_app()}_web", "router.ex"]),
-      application_file_path: MagicAuth.Config.context_app() |> MagicAuth.Config.context_app_path("application.ex")
+      application_file_path: MagicAuth.Config.context_app() |> MagicAuth.Config.context_lib_path("application.ex")
     }
   end
 

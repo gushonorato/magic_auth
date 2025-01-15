@@ -37,7 +37,8 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       end
     """)
 
-    application_file_path = MagicAuth.Config.context_app() |> MagicAuth.Config.context_app_path("application.ex")
+    File.mkdir_p!(MagicAuth.Config.context_app() |> MagicAuth.Config.context_lib_path(""))
+    application_file_path = MagicAuth.Config.context_app() |> MagicAuth.Config.context_lib_path("application.ex")
 
     File.write!(application_file_path, """
     defmodule MagicAuthExample.Application do
