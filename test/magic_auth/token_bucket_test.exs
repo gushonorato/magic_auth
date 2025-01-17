@@ -1,5 +1,6 @@
 defmodule MagicAuth.TokenBucketTest do
   use ExUnit.Case, async: false
+  import MagicAuthTest.Helpers
 
   defmodule EmailTokenBucket do
     use MagicAuth.TokenBucket, tokens: 30, reset_interval: 1
@@ -10,16 +11,16 @@ defmodule MagicAuth.TokenBucketTest do
   end
 
   setup do
-    start_supervised!(EmailTokenBucket)
-    start_supervised!(LoginAttemptsTokenBucket)
+    start_supervised(EmailTokenBucket)
+    start_supervised(LoginAttemptsTokenBucket)
     :ok
   end
 
-  test "EmailTokenBucket starts with 10 tokens" do
+  test "EmailTokenBucket starts with 30 tokens" do
     assert EmailTokenBucket.count("test_key") == 30
   end
 
-  test "LoginAttemptsTokenBucket starts with 30 tokens" do
+  test "LoginAttemptsTokenBucket starts with 10 tokens" do
     assert LoginAttemptsTokenBucket.count("test_key") == 10
   end
 
@@ -40,8 +41,8 @@ defmodule MagicAuth.TokenBucketTest do
   end
 
   test "allows requests within the limit" do
-    assert {:ok, 29} = EmailTokenBucket.take("test_key")
-    assert {:ok, 28} = EmailTokenBucket.take("test_key")
+    assert EmailTokenBucket.take("test_key") == {:ok, 29}
+    assert EmailTokenBucket.take("test_key") == {:ok, 28}
     assert EmailTokenBucket.count("test_key") == 28
   end
 
@@ -52,7 +53,7 @@ defmodule MagicAuth.TokenBucketTest do
     end
 
     # Try one more request
-    assert {:error, :rate_limited} = EmailTokenBucket.take("test_key")
+    assert EmailTokenBucket.take("test_key") == {:error, :rate_limited}
     assert EmailTokenBucket.count("test_key") == 0
   end
 
@@ -88,14 +89,14 @@ defmodule MagicAuth.TokenBucketTest do
   end
 
   test "does not decrement tokens when rate limit is disabled" do
-    Application.put_env(:magic_auth, :enable_rate_limit, false)
+    config_sandbox(fn ->
+      Application.put_env(:magic_auth, :enable_rate_limit, false)
 
-    assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
-    assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
-    assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
-    assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
-
-    Application.delete_env(:magic_auth, :enable_rate_limit)
+      assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
+      assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
+      assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
+      assert {:ok, 10} = LoginAttemptsTokenBucket.take("test_key")
+    end)
   end
 
   test "subscribers receive countdown updates" do

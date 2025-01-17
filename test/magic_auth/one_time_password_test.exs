@@ -1,6 +1,7 @@
 defmodule MagicAuth.OneTimePasswordTest do
   use MagicAuth.DataCase
   alias MagicAuth.OneTimePassword
+  import MagicAuthTest.Helpers
 
   describe "changeset/2" do
     test "creates a valid changeset with correct attributes" do
@@ -31,10 +32,11 @@ defmodule MagicAuth.OneTimePasswordTest do
     end
 
     test "generates code with custom length when configured" do
-      Application.put_env(:magic_auth, :one_time_password_length, 8)
-      code = OneTimePassword.generate_code()
-      assert String.length(code) == 8
-      Application.put_env(:magic_auth, :one_time_password_length, 6)
+      config_sandbox(fn ->
+        Application.put_env(:magic_auth, :one_time_password_length, 8)
+        code = OneTimePassword.generate_code()
+        assert String.length(code) == 8
+      end)
     end
 
     test "generates only numeric digits" do

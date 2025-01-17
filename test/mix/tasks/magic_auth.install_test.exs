@@ -3,13 +3,16 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
   import Mix.Tasks.MagicAuth.Install
   import ExUnit.CaptureIO
-  import MAgicAuthTest.MixHelpers
+  import MagicAuthTest.Helpers
+
+  setup do
+    preserve_app_env()
+  end
 
   setup do
     tmp = use_tmp_dir()
 
-    Application.put_env(:magic_auth, :otp_app, :magic_auth_example)
-    Application.put_env(:magic_auth_example, :ecto_repos, [MagicAuthTest.Repo])
+    Application.put_env(:magic_auth, :ecto_repos, [MagicAuthTest.Repo])
 
     File.mkdir_p!("config")
 
@@ -17,38 +20,38 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       import Config
     """)
 
-    web_path = MagicAuth.Config.web_path(MagicAuth.Config.context_app())
+    web_path = Mix.Phoenix.web_path(Mix.Phoenix.context_app())
     File.mkdir_p!(web_path)
 
     router_file_path = Path.join(web_path, "router.ex")
 
     File.write!(router_file_path, """
-      defmodule MagicAuthExampleWeb.Router do
-        use MagicAuthExampleWeb, :router
+      defmodule MagicAuthtWeb.Router do
+        use MagicAuthWeb, :router
 
         pipeline :browser do
           plug :accepts, ["html"]
           plug :fetch_session
           plug :fetch_live_flash
-          plug :put_root_layout, html: {MagicAuthExampleWeb.Layouts, :root}
+          plug :put_root_layout, html: {MagicAuthTestWeb.Layouts, :root}
           plug :protect_from_forgery
           plug :put_secure_browser_headers
         end
       end
     """)
 
-    File.mkdir_p!(MagicAuth.Config.context_app() |> MagicAuth.Config.context_lib_path(""))
-    application_file_path = MagicAuth.Config.context_app() |> MagicAuth.Config.context_lib_path("application.ex")
+    File.mkdir_p!(Mix.Phoenix.context_app() |> Mix.Phoenix.context_lib_path(""))
+    application_file_path = Mix.Phoenix.context_app() |> Mix.Phoenix.context_lib_path("application.ex")
 
     File.write!(application_file_path, """
-    defmodule MagicAuthExample.Application do
+    defmodule MagicAuthTest.Application do
       def start(_type, _args) do
         children = [
-          MagicAuthExample.Repo,
-          MagicAuthExampleWeb.Endpoint
+          MagicAuthTest.Repo,
+          MagicAuthTestWeb.Endpoint
         ]
 
-        opts = [strategy: :one_for_one, name: MagicAuthExample.Supervisor]
+        opts = [strategy: :one_for_one, name: MagicAuthTest.Supervisor]
         Supervisor.start_link(children, opts)
       end
     end
@@ -58,7 +61,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       teardown_tmp_dir(tmp)
     end)
 
-    %{web_path: web_path, router_file_path: router_file_path, application_file_path: application_file_path}
+    %{web_path: web_path, router_file_path: router_file_path, application_file_path: application_file_path, tmp: tmp}
   end
 
   test "displays success message" do
@@ -79,15 +82,18 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       run([])
     end)
 
-    assert File.dir?(MagicAuth.Config.migrations_path())
+    migrations_path = "priv/repo/migrations"
 
-    [migration_file] =
-      [MagicAuth.Config.migrations_path(), "*_create_magic_auth_tables.exs"]
+    assert File.dir?(migrations_path)
+
+    migrations =
+      [migrations_path, "*_create_magic_auth_tables.exs"]
       |> Path.join()
       |> Path.wildcard()
 
-    assert File.exists?(migration_file)
+    assert Enum.count(migrations) == 1
 
+    [migration_file] = migrations
     content = File.read!(migration_file)
     assert content =~ "defmodule MagicAuthTest.Repo.Migrations.CreateMagicAuthOneTimePasswords"
     assert content =~ "create table(:magic_auth_one_time_passwords)"
@@ -98,15 +104,15 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       run([])
     end)
 
-    web_path = MagicAuth.Config.context_app() |> MagicAuth.Config.web_path()
+    web_path = Mix.Phoenix.context_app() |> Mix.Phoenix.web_path()
     callbacks_file = "#{web_path}/magic_auth.ex"
 
     assert File.exists?(callbacks_file)
 
     content = File.read!(callbacks_file)
-    assert content =~ "defmodule MagicAuthExampleWeb.MagicAuth"
-    assert content =~ "MagicAuthExample.Mailer"
-    assert content =~ "use MagicAuthExampleWeb, :html"
+    assert content =~ "defmodule MagicAuthWeb.MagicAuth"
+    assert content =~ "MagicAuth.Mailer"
+    assert content =~ "use MagicAuthWeb, :html"
     assert content =~ "def log_in_form(assigns) do"
     assert content =~ "def verify_form(assigns) do"
     assert content =~ "defp one_time_password_input(assigns) do"
@@ -122,13 +128,21 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
   end
 
   test "injects configuration into config.exs" do
+    Application.put_env(:magic_auth, :context_app, :magic_auth_test)
+
     capture_io(fn ->
       run([])
     end)
 
     config_content = File.read!("config/config.exs")
 
-    assert config_content =~ "config :magic_auth, otp_app: :magic_auth_example"
+    assert config_content =~ """
+           config :magic_auth,
+             callbacks: MagicAuthWeb.MagicAuth,
+             repo: MagicAuthTest.Repo,
+             router: MagicAuthWeb.Router,
+             endpoint: MagicAuthWeb.Endpoint
+           """
   end
 
   test "doesn't duplicate configuration if already present" do
@@ -154,26 +168,16 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     File.rm("config/config.exs")
 
     assert_raise File.Error, ~r/could not read file/, fn ->
-      run([])
+      capture_io(fn ->
+        run([])
+      end)
     end
   end
 
   test "injects router configuration", %{router_file_path: router_file_path} do
-    File.write!(router_file_path, """
-    defmodule MagicAuthExampleWeb.Router do
-      use MagicAuthExampleWeb, :router
-
-      pipeline :browser do
-        plug :accepts, ["html"]
-        plug :fetch_session
-        plug :fetch_live_flash
-        plug :protect_from_forgery
-        plug :put_secure_browser_headers
-      end
-    end
-    """)
-
-    run([])
+    capture_io(fn ->
+      run([])
+    end)
 
     router_content = File.read!(router_file_path)
 
@@ -184,8 +188,8 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
   test "does not duplicate router configuration if already present", %{router_file_path: router_file_path} do
     File.write!(router_file_path, """
-    defmodule MagicAuthExampleWeb.Router do
-      use MagicAuthExampleWeb, :router
+    defmodule MagicAuthTestWeb.Router do
+      use MagicAuthTestWeb, :router
       use MagicAuth.Router
 
       magic_auth()
@@ -203,7 +207,9 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     initial_content = File.read!(router_file_path)
 
-    run([])
+    capture_io(fn ->
+      run([])
+    end)
 
     final_content = File.read!(router_file_path)
     assert initial_content == final_content
@@ -214,7 +220,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     File.rm_rf!(router_file_path)
 
     File.write!(router_file_path, """
-    defmodule MagicAuthExampleWeb.Router do
+    defmodule MagicAuthTestWeb.Router do
       # Different format than expected
     end
     """)
@@ -240,19 +246,21 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     content = File.read!(application_file_path)
 
     assert content == """
-           defmodule MagicAuthExample.Application do
+           defmodule MagicAuthTest.Application do
              def start(_type, _args) do
                children = [
-                 MagicAuthExample.Repo,
-                 MagicAuthExampleWeb.Endpoint
+                 MagicAuthTest.Repo,
+                 MagicAuthTestWeb.Endpoint
                ]
                children = children ++ MagicAuth.supervised_children()
 
-               opts = [strategy: :one_for_one, name: MagicAuthExample.Supervisor]
+               opts = [strategy: :one_for_one, name: MagicAuthTest.Supervisor]
                Supervisor.start_link(children, opts)
              end
            end
            """
+  after
+    Mix.shell(Mix.Shell.Process)
   end
 
   test "does not duplicate token buckets configuration if already present", %{
@@ -261,16 +269,16 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     File.rm!(application_file_path)
 
     File.write!(application_file_path, """
-    defmodule MagicAuthExample.Application do
+    defmodule MagicAuthTest.Application do
       def start(_type, _args) do
         children = [
-          MagicAuthExample.Repo,
-          MagicAuthExampleWeb.Endpoint
+          MagicAuthTest.Repo,
+          MagicAuthTestWeb.Endpoint
         ]
 
         children = children ++ MagicAuth.supervised_children()
 
-        opts = [strategy: :one_for_one, name: MagicAuthExample.Supervisor]
+        opts = [strategy: :one_for_one, name: MagicAuthTest.Supervisor]
         Supervisor.start_link(children, opts)
       end
     end
@@ -278,7 +286,9 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     initial_content = File.read!(application_file_path)
 
-    run([])
+    capture_io(fn ->
+      run([])
+    end)
 
     final_content = File.read!(application_file_path)
     assert initial_content == final_content
@@ -291,7 +301,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     File.rm_rf!(application_file_path)
 
     File.write!(application_file_path, """
-    defmodule MagicAuthExample.Application do
+    defmodule MagicAuthTest.Application do
       # Different format than expected
     end
     """)

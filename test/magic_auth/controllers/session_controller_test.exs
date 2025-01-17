@@ -1,24 +1,18 @@
 defmodule MagicAuth.SessionControllerTest do
   use MagicAuth.ConnCase, async: false
-
+  import MagicAuthTest.Helpers
   alias MagicAuthTestWeb.Router
 
   @endpoint MagicAuthTestWeb.Endpoint
 
   setup do
+    preserve_app_env()
+  end
+
+  setup do
     Application.put_env(:magic_auth, :enable_rate_limit, false)
-    Application.put_env(:magic_auth, :otp_app, :magic_auth_test)
-    Application.put_env(:magic_auth_test, :ecto_repos, [MagicAuthTest.Repo])
-    Application.put_env(:magic_auth, :callbacks, MagicAuth.CallbacksMock)
 
-    on_exit(fn ->
-      Application.delete_env(:magic_auth, :otp_app)
-      Application.delete_env(:magic_auth_test, :ecto_repos)
-      Application.delete_env(:magic_auth, :callbacks)
-      Application.delete_env(:magic_auth, :enable_rate_limit)
-    end)
-
-    Mox.stub(MagicAuth.CallbacksMock, :one_time_password_requested, fn _code, _one_time_password -> :ok end)
+    Mox.stub(MagicAuthTestWeb.CallbacksMock, :one_time_password_requested, fn _code, _one_time_password -> :ok end)
 
     conn = build_conn() |> Plug.Test.init_test_session(%{})
 
@@ -68,7 +62,7 @@ defmodule MagicAuth.SessionControllerTest do
     end
 
     test "logs in when code is valid", %{conn: conn, email: email} do
-      Mox.stub(MagicAuth.CallbacksMock, :log_in_requested, fn _email -> :allow end)
+      Mox.stub(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn _email -> :allow end)
       {:ok, code, _one_time_password} = MagicAuth.create_one_time_password(%{"email" => email})
 
       conn =

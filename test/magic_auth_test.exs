@@ -2,29 +2,24 @@ defmodule MagicAuthTest do
   use MagicAuth.ConnCase, async: false
 
   import Mox
+  import MagicAuthTest.Helpers
 
   require Phoenix.LiveView
   alias MagicAuth.{OneTimePassword, Session}
 
   setup :verify_on_exit!
 
+  setup do
+    preserve_app_env()
+  end
+
   doctest MagicAuth, except: [create_one_time_password: 1]
 
   setup do
-    Application.put_env(:magic_auth, :otp_app, :magic_auth_test)
-    Application.put_env(:magic_auth_test, :ecto_repos, [MagicAuthTest.Repo])
-    Application.put_env(:magic_auth, :callbacks, MagicAuth.CallbacksMock)
     Application.put_env(:magic_auth, :enable_rate_limit, false)
 
-    Mox.stub(MagicAuth.CallbacksMock, :one_time_password_requested, fn _code, _one_time_password -> :ok end)
-    Mox.stub(MagicAuth.CallbacksMock, :log_in_requested, fn _email -> :allow end)
-
-    on_exit(fn ->
-      Application.delete_env(:magic_auth, :otp_app)
-      Application.delete_env(:magic_auth_test, :ecto_repos)
-      Application.delete_env(:magic_auth, :callbacks)
-      Application.delete_env(:magic_auth, :enable_rate_limit)
-    end)
+    Mox.stub(MagicAuthTestWeb.CallbacksMock, :one_time_password_requested, fn _code, _one_time_password -> :ok end)
+    Mox.stub(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn _email -> :allow end)
 
     conn =
       build_conn()
@@ -91,7 +86,7 @@ defmodule MagicAuthTest do
     test "calls one_time_password_requested callback" do
       email = "user@example.com"
 
-      expect(MagicAuth.CallbacksMock, :one_time_password_requested, fn _code, on_time_password ->
+      expect(MagicAuthTestWeb.CallbacksMock, :one_time_password_requested, fn _code, on_time_password ->
         assert on_time_password.email == email
         :ok
       end)
@@ -100,16 +95,17 @@ defmodule MagicAuthTest do
     end
 
     test "returns error when rate limit is reached" do
-      start_supervised!(MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket)
-      Application.put_env(:magic_auth, :enable_rate_limit, true)
+      config_sandbox(fn ->
+        start_supervised!(MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket)
+        Application.put_env(:magic_auth, :enable_rate_limit, true)
 
-      email = "user@example.com"
+        email = "user@example.com"
 
-      assert {:ok, _code, _token} = MagicAuth.create_one_time_password(%{"email" => email})
-      assert {:error, :rate_limited, _countdown} = MagicAuth.create_one_time_password(%{"email" => email})
+        assert {:ok, _code, _token} = MagicAuth.create_one_time_password(%{"email" => email})
+        assert {:error, :rate_limited, _countdown} = MagicAuth.create_one_time_password(%{"email" => email})
 
-      Application.delete_env(:magic_auth, :enable_rate_limit)
-      stop_supervised!(MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket)
+        stop_supervised!(MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket)
+      end)
     end
   end
 
@@ -138,11 +134,12 @@ defmodule MagicAuthTest do
       password = "123456"
       hashed_password = Bcrypt.hash_pwd_salt(password)
 
+      expiration = MagicAuth.Config.one_time_password_expiration() + 1
+
       # Create a one_time_password with old timestamp
       expired_time =
         DateTime.utc_now()
-        # 11 minutes in the past
-        |> DateTime.add(-11, :minute)
+        |> DateTime.add(-expiration, :minute)
         |> DateTime.truncate(:second)
 
       %OneTimePassword{
@@ -156,32 +153,31 @@ defmodule MagicAuthTest do
     end
 
     test "returns ok when password is within custom expiration time" do
-      email = "test@example.com"
-      password = "123456"
-      hashed_password = Bcrypt.hash_pwd_salt(password)
+      config_sandbox(fn ->
+        email = "test@example.com"
+        password = "123456"
+        hashed_password = Bcrypt.hash_pwd_salt(password)
 
-      # Configura tempo de expiração para 50 minutos
-      Application.put_env(:magic_auth, :one_time_password_expiration, 50)
+        # Configura tempo de expiração para 50 minutos
+        Application.put_env(:magic_auth, :one_time_password_expiration, 50)
 
-      # Cria uma sessão com timestamp de 45 minutos atrás
-      past_time =
-        DateTime.utc_now()
-        |> DateTime.add(-45, :minute)
-        |> DateTime.truncate(:second)
+        # Cria uma sessão com timestamp de 45 minutos atrás
+        past_time =
+          DateTime.utc_now()
+          |> DateTime.add(-45, :minute)
+          |> DateTime.truncate(:second)
 
-      one_time_password =
-        %OneTimePassword{
-          email: email,
-          hashed_password: hashed_password,
-          inserted_at: past_time
-        }
-        |> MagicAuth.Config.repo_module().insert!()
+        one_time_password =
+          %OneTimePassword{
+            email: email,
+            hashed_password: hashed_password,
+            inserted_at: past_time
+          }
+          |> MagicAuth.Config.repo_module().insert!()
 
-      assert {:ok, returned_one_time_password} = MagicAuth.verify_password(email, password)
-      assert returned_one_time_password.id == one_time_password.id
-
-      # Restaura configuração padrão
-      Application.put_env(:magic_auth, :one_time_password_expiration, 10)
+        assert {:ok, returned_one_time_password} = MagicAuth.verify_password(email, password)
+        assert returned_one_time_password.id == one_time_password.id
+      end)
     end
 
     test "returns error when password is incorrect" do
@@ -208,38 +204,29 @@ defmodule MagicAuthTest do
 
   describe "one_time_password_length/0" do
     test "verifies default password length of 8 digits" do
-      # Configure password length to 8 digits
-      Application.put_env(:magic_auth, :one_time_password_length, 8)
+      config_sandbox(fn ->
+        # Configure password length to 8 digits
+        Application.put_env(:magic_auth, :one_time_password_length, 8)
 
-      email = "test@example.com"
-      password = "12345678"
-      hashed_password = Bcrypt.hash_pwd_salt(password)
+        email = "test@example.com"
+        password = "12345678"
+        hashed_password = Bcrypt.hash_pwd_salt(password)
 
-      one_time_password =
-        %OneTimePassword{
-          email: email,
-          hashed_password: hashed_password,
-          inserted_at: DateTime.utc_now() |> DateTime.truncate(:second)
-        }
-        |> MagicAuth.Config.repo_module().insert!()
+        one_time_password =
+          %OneTimePassword{
+            email: email,
+            hashed_password: hashed_password,
+            inserted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+          }
+          |> MagicAuth.Config.repo_module().insert!()
 
-      assert {:ok, returned_one_time_password} = MagicAuth.verify_password(email, password)
-      assert returned_one_time_password.id == one_time_password.id
-
-      # Restore default configuration
-      Application.put_env(:magic_auth, :one_time_password_length, 6)
+        assert {:ok, returned_one_time_password} = MagicAuth.verify_password(email, password)
+        assert returned_one_time_password.id == one_time_password.id
+      end)
     end
   end
 
   describe "log_in/3" do
-    setup do
-      Application.put_env(:magic_auth, :router, MagicAuthTestWeb.Router)
-
-      on_exit(fn ->
-        Application.delete_env(:magic_auth, :repo)
-      end)
-    end
-
     test "returns conn", %{conn: conn, code: code, email: email} do
       conn = MagicAuth.log_in(conn, email, code)
       assert %Plug.Conn{} = conn
@@ -275,25 +262,26 @@ defmodule MagicAuthTest do
     end
 
     test "does not write a cookie when remember_me is not configured", %{conn: conn, code: code, email: email} do
-      Application.put_env(:magic_auth, :remember_me, false)
-      conn = conn |> fetch_cookies() |> MagicAuth.log_in(email, code)
-      refute conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
-      Application.put_env(:magic_auth, :remember_me, true)
+      config_sandbox(fn ->
+        Application.put_env(:magic_auth, :remember_me, false)
+        conn = conn |> fetch_cookies() |> MagicAuth.log_in(email, code)
+        refute conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
+      end)
     end
 
     test "changes session validity to 90 days", %{conn: conn, code: code, email: email} do
-      Application.put_env(:magic_auth, :session_validity_in_days, 90)
-      conn = conn |> fetch_cookies() |> MagicAuth.log_in(email, code)
+      config_sandbox(fn ->
+        Application.put_env(:magic_auth, :session_validity_in_days, 90)
+        conn = conn |> fetch_cookies() |> MagicAuth.log_in(email, code)
 
-      assert %{max_age: max_age} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
-      # 90 days in seconds
-      assert max_age == 7_776_000
-
-      Application.put_env(:magic_auth, :session_validity_in_days, 60)
+        assert %{max_age: max_age} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
+        # 90 days in seconds
+        assert max_age == 7_776_000
+      end)
     end
 
     test "redirects to signed_in when log_in_requested returns :allow", %{conn: conn, code: code, email: email} do
-      Mox.expect(MagicAuth.CallbacksMock, :log_in_requested, fn ^email -> :allow end)
+      Mox.expect(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn ^email -> :allow end)
 
       conn = MagicAuth.log_in(conn, email, code)
 
@@ -302,8 +290,8 @@ defmodule MagicAuthTest do
     end
 
     test "redirects to log_in when log_in_requested returns :deny", %{conn: conn, code: code, email: email} do
-      Mox.expect(MagicAuth.CallbacksMock, :log_in_requested, fn ^email -> :deny end)
-      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :access_denied, _opts -> "Access denied" end)
+      Mox.expect(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn ^email -> :deny end)
+      Mox.expect(MagicAuthTestWeb.CallbacksMock, :translate_error, fn :access_denied, _opts -> "Access denied" end)
 
       conn = conn |> fetch_flash() |> MagicAuth.log_in(email, code)
 
@@ -392,7 +380,7 @@ defmodule MagicAuthTest do
 
   describe "require_authenticated/2" do
     test "redirects when not authenticated", %{conn: conn} do
-      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :unauthorized, _opts ->
+      Mox.expect(MagicAuthTestWeb.CallbacksMock, :translate_error, fn :unauthorized, _opts ->
         "You must log in to access this page."
       end)
 
@@ -487,7 +475,7 @@ defmodule MagicAuthTest do
 
   describe "on_mount :require_authenticated" do
     test "redirects when not authenticated" do
-      Mox.expect(MagicAuth.CallbacksMock, :translate_error, fn :unauthorized, _opts ->
+      Mox.expect(MagicAuthTestWeb.CallbacksMock, :translate_error, fn :unauthorized, _opts ->
         "You must log in to access this page."
       end)
 
