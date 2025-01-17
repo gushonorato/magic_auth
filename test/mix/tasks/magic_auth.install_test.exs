@@ -65,16 +65,12 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
   end
 
   test "displays success message" do
-    Mix.shell(Mix.Shell.IO)
-
     output =
       capture_io(fn ->
         run([])
       end)
 
     assert output =~ "Magic Auth installed successfully!"
-  after
-    Mix.shell(Mix.Shell.Process)
   end
 
   test "creates migration file successfully" do
@@ -217,7 +213,6 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
   end
 
   test "displays error message when unable to inject router configuration", %{router_file_path: router_file_path} do
-    Mix.shell(Mix.Shell.IO)
     File.rm_rf!(router_file_path)
 
     File.write!(router_file_path, """
@@ -233,13 +228,9 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     assert output =~ "The task was unable to add some configuration to your router.ex"
     assert output =~ "You should manually add the following code to your router.ex"
-  after
-    Mix.shell(Mix.Shell.Process)
   end
 
   test "installs token buckets configuration", %{application_file_path: application_file_path} do
-    Mix.shell(Mix.Shell.IO)
-
     capture_io(fn ->
       run([])
     end)
@@ -260,8 +251,6 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
              end
            end
            """
-  after
-    Mix.shell(Mix.Shell.Process)
   end
 
   test "does not duplicate token buckets configuration if already present", %{
@@ -298,7 +287,6 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
   test "displays error message when unable to inject token buckets configuration", %{
     application_file_path: application_file_path
   } do
-    Mix.shell(Mix.Shell.IO)
     File.rm_rf!(application_file_path)
 
     File.write!(application_file_path, """
@@ -314,7 +302,5 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     assert output =~ "The task was unable to add some configuration to your application.ex"
     assert output =~ "You should manually add the following code to your application.ex"
-  after
-    Mix.shell(Mix.Shell.Process)
   end
 end
