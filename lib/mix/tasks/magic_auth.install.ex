@@ -10,6 +10,8 @@ defmodule Mix.Tasks.MagicAuth.Install do
     Mix.Phoenix.base() |> Mix.Phoenix.web_module() |> to_string() |> String.replace_prefix("Elixir.", "")
   end
 
+  defp js_file, do: "assets/js/app.js"
+
   defp callbacks_module do
     Mix.Phoenix.base()
     |> Mix.Phoenix.web_module()
@@ -67,6 +69,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
     install_magic_auth_callbacks()
     inject_router()
     install_token_buckets()
+    install_js()
 
     Mix.shell().info("""
 
@@ -219,5 +222,81 @@ defmodule Mix.Tasks.MagicAuth.Install do
 
   defp token_bucket_installed?(application_file_content) do
     String.contains?(application_file_content, "MagicAuth.supervised_children")
+  end
+
+  defp install_js() do
+    Mix.shell().info(IO.ANSI.cyan() <> "* injecting " <> IO.ANSI.reset() <> "#{js_file()}")
+
+    inject_js_import()
+    inject_js_magic_auth_hook()
+  end
+
+  defp check_if_injected(js_file_content, content) do
+    if String.contains?(js_file_content, content) do
+      :already_injected
+    else
+      :not_injected
+    end
+  end
+
+  defp inject_js_import() do
+    with {:ok, js_file_content} <- File.read(js_file()),
+         :not_injected <-
+           check_if_injected(js_file_content, ~s(from "magic_auth")),
+         true <- String.contains?(js_file_content, ~s(from "phoenix_live_view")) do
+      js_file_content =
+        String.replace(
+          js_file_content,
+          ~s(from "phoenix_live_view"\n),
+          ~s(from "phoenix_live_view"\nimport {MagicAuthHooks} from "magic_auth"\n)
+        )
+
+      File.write!(js_file(), js_file_content)
+    else
+      :already_injected ->
+        :ok
+
+      _ ->
+        Mix.shell().info("""
+        The task was unable to add some configuration to your app.js. You should manually add the following code to your app.js file to complete the setup:
+
+        import {MagicAuthHooks} from "magic_auth"
+        """)
+    end
+  end
+
+  defp inject_js_magic_auth_hook() do
+    lookup_content = """
+    let liveSocket = new LiveSocket("/live", Socket, {
+      longPollFallbackMs: 2500,
+      params: {_csrf_token: csrfToken}
+    })
+    """
+
+    with {:ok, js_file_content} <- File.read(js_file()),
+         :not_injected <- check_if_injected(js_file_content, "hooks: {...MagicAuthHooks}"),
+         true <- String.contains?(js_file_content, lookup_content) do
+      js_file_content =
+        String.replace(
+          js_file_content,
+          "params: {_csrf_token: csrfToken}",
+          "params: {_csrf_token: csrfToken},\n  hooks: {...MagicAuthHooks}"
+        )
+
+      File.write!(js_file(), js_file_content)
+    else
+      :already_injected ->
+        :ok
+
+      _ ->
+        Mix.shell().info("""
+        The task was unable to add some configuration to your app.js. You should manually add the following code to your app.js file to complete the setup:
+
+        let liveSocket = new LiveSocket("/live", Socket, {
+          # add this hooks in line below into your liveSocket configuration
+          hooks: {...MagicAuthHooks}
+        })
+        """)
+    end
   end
 end

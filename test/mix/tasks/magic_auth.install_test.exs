@@ -303,4 +303,146 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert output =~ "The task was unable to add some configuration to your application.ex"
     assert output =~ "You should manually add the following code to your application.ex"
   end
+
+  describe "inject_js_import/0" do
+    test "injects js import magic_auth when js file exists" do
+      js_file_path = "assets/js/app.js"
+      File.mkdir_p!("assets/js")
+
+      File.write!(js_file_path, """
+      import {Socket} from "phoenix"
+      import {LiveSocket} from "phoenix_live_view"
+      """)
+
+      capture_io(fn ->
+        run([])
+      end)
+
+      content = File.read!(js_file_path)
+      assert content =~ ~s(import {MagicAuthHooks} from "magic_auth")
+    end
+
+    test "does not duplicate import if already present" do
+      js_file_path = "assets/js/app.js"
+      File.mkdir_p!("assets/js")
+
+      File.write!(js_file_path, """
+      import {Socket} from "phoenix"
+      import {LiveSocket} from "phoenix_live_view"
+      import {MagicAuthHooks} from "magic_auth"
+      """)
+
+      initial_content = File.read!(js_file_path)
+
+      capture_io(fn ->
+        run([])
+      end)
+
+      final_content = File.read!(js_file_path)
+      assert initial_content == final_content
+    end
+
+    test "displays error message when phoenix_live_view pattern is not found" do
+      js_file_path = "assets/js/app.js"
+      File.mkdir_p!("assets/js")
+
+      File.write!(js_file_path, """
+      // JS file without phoenix_live_view import
+      console.log("Hello World");
+      """)
+
+      output =
+        capture_io(fn ->
+          run([])
+        end)
+
+      content = File.read!(js_file_path)
+      refute content =~ ~s(from "magic_auth")
+      assert output =~ "The task was unable to add some configuration to your app.js"
+      assert output =~ ~s(from "magic_auth")
+    end
+  end
+
+  describe "inject_js_magic_auth_hook/0" do
+    test "injects MagicAuthHooks when js file exists" do
+      js_file_path = "assets/js/app.js"
+      File.mkdir_p!("assets/js")
+
+      File.write!(js_file_path, """
+      let liveSocket = new LiveSocket("/live", Socket, {
+        longPollFallbackMs: 2500,
+        params: {_csrf_token: csrfToken}
+      })
+      """)
+
+      capture_io(fn ->
+        run([])
+      end)
+
+      content = File.read!(js_file_path)
+
+      assert content =~ """
+             let liveSocket = new LiveSocket("/live", Socket, {
+               longPollFallbackMs: 2500,
+               params: {_csrf_token: csrfToken},
+               hooks: {...MagicAuthHooks}
+             })
+             """
+    end
+
+    test "does not duplicate import if already present" do
+      js_file_path = "assets/js/app.js"
+      File.mkdir_p!("assets/js")
+
+      File.write!(js_file_path, """
+      let liveSocket = new LiveSocket("/live", Socket, {
+        longPollFallbackMs: 2500,
+        params: {_csrf_token: csrfToken},
+        hooks: {...MagicAuthHooks}
+      })
+      """)
+
+      initial_content = File.read!(js_file_path)
+
+      capture_io(fn ->
+        run([])
+      end)
+
+      final_content = File.read!(js_file_path)
+      assert initial_content == final_content
+    end
+
+    test "displays error message when liveSocket pattern is not found" do
+      js_file_path = "assets/js/app.js"
+      File.mkdir_p!("assets/js")
+
+      File.write!(js_file_path, """
+      let liveSocket = new LiveSocket("/live", Socket, {
+        longPollFallbackMs: 2500,
+        params: {_csrf_token: csrfToken},
+        hooks: {...AppHooks}
+      })
+      """)
+
+      output =
+        capture_io(fn ->
+          run([])
+        end)
+
+      content = File.read!(js_file_path)
+      refute content =~ "hooks: {...MagicAuthHooks}"
+      assert output =~ "The task was unable to add some configuration to your app.js"
+      assert output =~ "hooks: {...MagicAuthHooks}"
+    end
+  end
+
+  test "displays error message when unable to find /assets/js/app.js file" do
+    output =
+      capture_io(fn ->
+        run([])
+      end)
+
+    assert output =~ "The task was unable to add some configuration to your app.js"
+    assert output =~ ~s(import {MagicAuthHooks} from "magic_auth")
+  end
 end
