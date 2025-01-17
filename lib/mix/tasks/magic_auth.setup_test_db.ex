@@ -8,23 +8,21 @@ defmodule Mix.Tasks.MagicAuth.SetupTestDb do
       Mix.env(:test)
       Mix.Task.run("loadconfig")
       Application.put_env(:magic_auth, :ecto_repos, [MagicAuthTest.Repo])
-      Code.require_file("test/support/test_repo.ex")
+      Code.require_file("test/support/repo.ex")
 
       Mix.Tasks.Ecto.Drop.run(["--quiet"])
 
-      []
-      |> Mix.Tasks.MagicAuth.Install.build_assigns()
-      |> Mix.Tasks.MagicAuth.Install.install_magic_token_migration_file()
+      Mix.Tasks.MagicAuth.Install.install_magic_token_migration_file()
 
       Mix.Task.run("ecto.create", ["--quiet"])
 
       Mix.Task.run("ecto.migrate", [
         "--quiet",
         "--migrations-path",
-        "priv/test_repo/migrations"
+        "priv/repo/migrations"
       ])
     after
-      File.rm_rf!("priv/test_repo/migrations")
+      File.rm_rf!("priv/repo/migrations")
       Mix.env(mix_env)
     end
   end
