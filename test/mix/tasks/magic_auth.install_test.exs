@@ -141,7 +141,8 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
              callbacks: MagicAuthWeb.MagicAuth,
              repo: MagicAuthTest.Repo,
              router: MagicAuthWeb.Router,
-             endpoint: MagicAuthWeb.Endpoint
+             endpoint: MagicAuthWeb.Endpoint,
+             remember_me_cookie: "_magic_auth_remember_me"
            """
   end
 

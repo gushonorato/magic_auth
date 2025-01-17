@@ -79,7 +79,8 @@ defmodule Mix.Tasks.MagicAuth.Install do
             callbacks: #{base() |> web_module() |> to_string() |> String.replace_prefix("Elixir.", "")}.MagicAuth,
             repo: #{repo_module()},
             router: #{base() |> web_module() |> to_string() |> String.replace_prefix("Elixir.", "")}.Router,
-            endpoint: #{base() |> web_module() |> to_string() |> String.replace_prefix("Elixir.", "")}.Endpoint
+            endpoint: #{base() |> web_module() |> to_string() |> String.replace_prefix("Elixir.", "")}.Endpoint,
+            remember_me_cookie: "_#{context_app()}_remember_me"
           """
       )
     end
