@@ -63,6 +63,14 @@ defmodule Mix.Tasks.MagicAuth.Install do
     Mix.Phoenix.context_app_path(Mix.Phoenix.context_app(), Path.join(["priv", repo_path(), "migrations", file]))
   end
 
+  defp config_file() do
+    if Mix.Phoenix.in_umbrella?(".") do
+      Path.join(["..", "..", "config", "config.exs"])
+    else
+      Path.join(["config", "config.exs"])
+    end
+  end
+
   def run(_args) do
     inject_config()
     install_magic_token_migration_file()
@@ -81,14 +89,13 @@ defmodule Mix.Tasks.MagicAuth.Install do
   end
 
   def inject_config() do
-    config_file = Path.join(["config/config.exs"])
-    Mix.shell().info(IO.ANSI.cyan() <> "* injecting " <> IO.ANSI.reset() <> "#{config_file}")
+    Mix.shell().info(IO.ANSI.cyan() <> "* injecting " <> IO.ANSI.reset() <> "config/config.exs")
 
-    config_content = File.read!(config_file)
+    config_content = File.read!(config_file())
 
     unless String.match?(config_content, ~r/config :magic_auth\b/) do
       File.write!(
-        config_file,
+        config_file(),
         config_content <>
           """
           config :magic_auth,
@@ -210,11 +217,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
           Mix.shell().info("""
           The task was unable to add some configuration to your application.ex. You should manually add the following code to your application.ex file to complete the setup:
 
-          children = [
-            # add this after the other children
-            MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket,
-            MagicAuth.TokenBuckets.LoginAttemptTokenBucket,
-          ]
+          children = children ++ MagicAuth.supervised_children()
           """)
       end
     end
