@@ -206,7 +206,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
           {prelude, postlude} = String.split_at(application_file_content, index + length)
 
           changed_application_file_content =
-            prelude <> "    children = children ++ MagicAuth.supervised_children()\n" <> postlude
+            prelude <> "    children = children ++ MagicAuth.children()\n" <> postlude
 
           File.write!(application_file(), changed_application_file_content)
 
@@ -214,14 +214,14 @@ defmodule Mix.Tasks.MagicAuth.Install do
           Mix.shell().info("""
           The task was unable to add some configuration to your application.ex. You should manually add the following code to your application.ex file to complete the setup:
 
-          children = children ++ MagicAuth.supervised_children()
+          children = children ++ MagicAuth.children()
           """)
       end
     end
   end
 
   defp token_bucket_installed?(application_file_content) do
-    String.contains?(application_file_content, "MagicAuth.supervised_children")
+    String.contains?(application_file_content, "MagicAuth.children")
   end
 
   defp install_js() do

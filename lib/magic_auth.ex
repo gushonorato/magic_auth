@@ -409,7 +409,7 @@ defmodule MagicAuth do
     end)
   end
 
-  def supervised_children do
+  def children do
     [
       MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket,
       MagicAuth.TokenBuckets.LoginAttemptTokenBucket

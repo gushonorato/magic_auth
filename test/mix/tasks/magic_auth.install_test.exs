@@ -237,7 +237,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
                  MagicAuthTest.Repo,
                  MagicAuthTestWeb.Endpoint
                ]
-               children = children ++ MagicAuth.supervised_children()
+               children = children ++ MagicAuth.children()
 
                opts = [strategy: :one_for_one, name: MagicAuthTest.Supervisor]
                Supervisor.start_link(children, opts)
@@ -259,7 +259,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
           MagicAuthTestWeb.Endpoint
         ]
 
-        children = children ++ MagicAuth.supervised_children()
+        children = children ++ MagicAuth.children()
 
         opts = [strategy: :one_for_one, name: MagicAuthTest.Supervisor]
         Supervisor.start_link(children, opts)

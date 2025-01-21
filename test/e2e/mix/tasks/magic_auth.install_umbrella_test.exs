@@ -85,7 +85,7 @@ defmodule E2E.Mix.Tasks.MagicAuth.InstallUmbrellaTest do
       |> Path.join()
       |> File.read!()
 
-    assert String.contains?(application, "children = children ++ MagicAuth.supervised_children()")
+    assert String.contains?(application, "children = children ++ MagicAuth.children()")
   end
 
   @tag :e2e
