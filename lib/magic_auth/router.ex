@@ -52,7 +52,7 @@ defmodule MagicAuth.Router do
   defmacro __using__(_opts) do
     quote do
       import MagicAuth.Router
-      import MagicAuth, only: [require_authenticated: 2, redirect_if_authenticated: 2, fetch_current_user_session: 2]
+      import MagicAuth, only: [require_authenticated: 2, redirect_if_authenticated: 2, fetch_magic_auth_session: 2]
     end
   end
 

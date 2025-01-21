@@ -10,16 +10,27 @@ defmodule E2E.Mix.Tasks.MagicAuth.InstallUmbrellaTest do
   @context_project_path Path.join([@umbrella_path, "apps", @project_name])
 
   setup_all :use_tmp_dir
+
   setup_all do
     # Create a new Phoenix umbrella project with minimal dependencies
-    System.cmd("mix", ["phx.new", @project_name, "--umbrella", "--no-install", "--no-dashboard", "--no-gettext", "--no-mailer"])
+    System.cmd("mix", [
+      "phx.new",
+      @project_name,
+      "--umbrella",
+      "--no-install",
+      "--no-dashboard",
+      "--no-gettext",
+      "--no-mailer"
+    ])
 
     # Add magic_auth dependency to the web project's mix.exs
-    mix_file = Path.join([@web_project_path , "mix.exs"])
+    mix_file = Path.join([@web_project_path, "mix.exs"])
+
     file_contents =
       mix_file
       |> File.read!()
       |> String.replace(~s({:bandit, "~> 1.5"}), ~s({:bandit, "~> 1.5"},\n    {:magic_auth, path: "../../../../../"}\n))
+
     File.write!(mix_file, file_contents)
 
     # Install dependencies in the umbrella project
@@ -42,6 +53,7 @@ defmodule E2E.Mix.Tasks.MagicAuth.InstallUmbrellaTest do
       [@umbrella_path, "config", "config.exs"]
       |> Path.join()
       |> File.read!()
+
     assert String.contains?(config, "config :magic_auth")
   end
 
@@ -59,7 +71,7 @@ defmodule E2E.Mix.Tasks.MagicAuth.InstallUmbrellaTest do
       |> File.read!()
 
     assert String.contains?(router, "use MagicAuth.Router")
-    assert String.contains?(router, "plug :fetch_current_user_session")
+    assert String.contains?(router, "plug :fetch_magic_auth_session")
   end
 
   @tag :e2e

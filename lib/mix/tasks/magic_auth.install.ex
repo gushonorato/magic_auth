@@ -132,7 +132,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
   defp inject_router() do
     Mix.shell().info(IO.ANSI.cyan() <> "* injecting " <> IO.ANSI.reset() <> "#{router_file()}")
     inject_use_router()
-    inject_fetch_current_user_session_plug()
+    inject_fetch_magic_auth_session_plug()
   end
 
   defp inject_use_router() do
@@ -168,36 +168,33 @@ defmodule Mix.Tasks.MagicAuth.Install do
     String.contains?(router_file_content, "use MagicAuth.Router")
   end
 
-  defp inject_fetch_current_user_session_plug() do
-    router_file_content = File.read!(router_file())
+  defp inject_fetch_magic_auth_session_plug() do
+    with {:ok, router_file_content} <- File.read(router_file()),
+         :not_injected <- check_if_injected(router_file_content, "plug :fetch_magic_auth_session"),
+         true <- String.contains?(router_file_content, "plug :put_secure_browser_headers") do
 
-    unless fetch_current_user_session_plug_installed?(router_file_content) do
-      case Regex.run(~r/pipeline :browser do(.*)end/Us, router_file_content, return: :index) do
-        [{_, _}, {_, index}] ->
-          changed_router_file_content =
-            router_file_content
-            |> String.split_at(index)
-            |> Tuple.to_list()
-            |> Enum.join("    plug :fetch_current_user_session\n")
+      router_file_content = String.replace(router_file_content,
+      "plug :put_secure_browser_headers",
+      "plug :put_secure_browser_headers\n    plug :fetch_magic_auth_session")
 
-          File.write!(router_file(), changed_router_file_content)
+      File.write!(router_file(), router_file_content)
 
-        _not_found ->
-          Mix.shell().info("""
-          The task was unable to add some configuration to your router.ex. You should manually add the following code to your router.ex file to complete the setup:
+    else
+      :already_injected ->
+        :ok
 
-          pipeline :browser do
-            # add this after the other plugs
-            plug :fetch_current_user_session
-          end
-          """)
-      end
+      _ ->
+        Mix.shell().info("""
+        The task was unable to add some configuration to your router.ex. You should manually add the following code to your router.ex file to complete the setup:
+
+        pipeline :browser do
+          # add this after the other plugs
+          plug :fetch_magic_auth_session
+        end
+        """)
     end
   end
 
-  def fetch_current_user_session_plug_installed?(router_file_content) do
-    String.contains?(router_file_content, "plug :fetch_current_user_session")
-  end
 
   defp install_token_buckets() do
     Mix.shell().info(IO.ANSI.cyan() <> "* injecting " <> IO.ANSI.reset() <> "#{application_file()}")

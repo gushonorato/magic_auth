@@ -357,19 +357,19 @@ defmodule MagicAuthTest do
   end
 
   describe "session authentication" do
-    test "fetch_current_user_session returns nil when there is no token", %{conn: conn} do
-      conn = MagicAuth.fetch_current_user_session(conn, [])
+    test "fetch_magic_auth_session returns nil when there is no token", %{conn: conn} do
+      conn = MagicAuth.fetch_magic_auth_session(conn, [])
       assert conn.assigns.current_user_session == nil
     end
 
-    test "fetch_current_user_session loads session when token is valid", %{conn: conn} do
+    test "fetch_magic_auth_session loads session when token is valid", %{conn: conn} do
       email = "test@example.com"
       session = MagicAuth.create_session!(email)
 
       conn =
         conn
         |> put_session(:session_token, session.token)
-        |> MagicAuth.fetch_current_user_session([])
+        |> MagicAuth.fetch_magic_auth_session([])
 
       assert %Session{email: ^email} = conn.assigns.current_user_session
     end
@@ -402,7 +402,7 @@ defmodule MagicAuthTest do
     end
   end
 
-  describe "fetch_current_user_session/2" do
+  describe "fetch_magic_auth_session/2" do
     test "loads session from session token when there is no remember_me cookie", %{conn: conn} do
       email = "test@example.com"
       session = MagicAuth.create_session!(email)
@@ -410,20 +410,20 @@ defmodule MagicAuthTest do
       conn =
         conn
         |> put_session(:session_token, session.token)
-        |> MagicAuth.fetch_current_user_session([])
+        |> MagicAuth.fetch_magic_auth_session([])
 
       assert %Session{email: ^email} = conn.assigns.current_user_session
     end
 
     test "loads session from remember_me cookie when there is no session token", %{conn: conn, email: email, code: code} do
       conn = MagicAuth.log_in(conn, email, code)
-      conn = MagicAuth.fetch_current_user_session(conn, [])
+      conn = MagicAuth.fetch_magic_auth_session(conn, [])
 
       assert %Session{email: ^email} = conn.assigns.current_user_session
     end
 
     test "returns nil when there is no session token and no remember_me cookie", %{conn: conn} do
-      conn = MagicAuth.fetch_current_user_session(conn, [])
+      conn = MagicAuth.fetch_magic_auth_session(conn, [])
 
       assert conn.assigns.current_user_session == nil
     end
@@ -432,7 +432,7 @@ defmodule MagicAuthTest do
       conn =
         conn
         |> put_resp_cookie(MagicAuth.Config.remember_me_cookie(), "invalid_token", MagicAuth.remember_me_options())
-        |> MagicAuth.fetch_current_user_session([])
+        |> MagicAuth.fetch_magic_auth_session([])
 
       assert conn.assigns.current_user_session == nil
     end
@@ -527,7 +527,7 @@ defmodule MagicAuthTest do
       conn =
         conn
         |> put_session(:session_token, session.token)
-        |> MagicAuth.fetch_current_user_session([])
+        |> MagicAuth.fetch_magic_auth_session([])
 
       assert conn.assigns.current_user_session == nil
     end

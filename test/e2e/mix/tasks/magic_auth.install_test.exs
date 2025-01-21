@@ -7,13 +7,21 @@ defmodule E2E.Mix.Tasks.MagicAuth.InstallTest do
   @phoenix_project "magic_auth_test"
 
   setup_all :use_tmp_dir
+
   setup_all do
     # Create a new Phoenix project with minimal dependencies
     System.cmd("mix", ["phx.new", @phoenix_project, "--no-install", "--no-dashboard", "--no-gettext", "--no-mailer"])
 
     # Add magic_auth dependency to the project's mix.exs
     file_contents = [@phoenix_project, "mix.exs"] |> Path.join() |> File.read!()
-    file_contents = String.replace(file_contents, ~s({:bandit, "~> 1.5"}), ~s({:bandit, "~> 1.5"},\n    {:magic_auth, path: "../../../"}\n))
+
+    file_contents =
+      String.replace(
+        file_contents,
+        ~s({:bandit, "~> 1.5"}),
+        ~s({:bandit, "~> 1.5"},\n    {:magic_auth, path: "../../../"}\n)
+      )
+
     [@phoenix_project, "mix.exs"] |> Path.join() |> File.write!(file_contents)
 
     # Install project dependencies
@@ -36,6 +44,7 @@ defmodule E2E.Mix.Tasks.MagicAuth.InstallTest do
       [@phoenix_project, "config", "config.exs"]
       |> Path.join()
       |> File.read!()
+
     assert String.contains?(config, "config :magic_auth")
   end
 
@@ -53,7 +62,7 @@ defmodule E2E.Mix.Tasks.MagicAuth.InstallTest do
       |> File.read!()
 
     assert String.contains?(router, "use MagicAuth.Router")
-    assert String.contains?(router, "plug :fetch_current_user_session")
+    assert String.contains?(router, "plug :fetch_magic_auth_session")
   end
 
   @tag :e2e

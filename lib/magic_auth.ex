@@ -322,7 +322,7 @@ defmodule MagicAuth do
   Authenticates the user session by looking into the session
   and remember me token.
   """
-  def fetch_current_user_session(conn, _opts) do
+  def fetch_magic_auth_session(conn, _opts) do
     {session_token, conn} = ensure_user_session_token(conn)
     session = session_token && get_session_by_token(session_token)
     assign(conn, :current_user_session, session)

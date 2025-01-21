@@ -173,7 +173,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     assert router_content =~ "use MagicAuth.Router"
     assert router_content =~ "magic_auth()"
-    assert router_content =~ "plug :fetch_current_user_session"
+    assert router_content =~ "plug :fetch_magic_auth_session"
   end
 
   test "does not duplicate router configuration if already present", %{router_file_path: router_file_path} do
@@ -190,7 +190,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
         plug :fetch_live_flash
         plug :protect_from_forgery
         plug :put_secure_browser_headers
-        plug :fetch_current_user_session
+        plug :fetch_magic_auth_session
       end
     end
     """)
