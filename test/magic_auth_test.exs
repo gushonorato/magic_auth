@@ -8,10 +8,7 @@ defmodule MagicAuthTest do
   alias MagicAuth.{OneTimePassword, Session}
 
   setup :verify_on_exit!
-
-  setup do
-    preserve_app_env()
-  end
+  setup :preserve_app_env
 
   doctest MagicAuth, except: [create_one_time_password: 1]
 

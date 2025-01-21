@@ -5,9 +5,7 @@ defmodule MagicAuth.SessionControllerTest do
 
   @endpoint MagicAuthTestWeb.Endpoint
 
-  setup do
-    preserve_app_env()
-  end
+  setup :preserve_app_env
 
   setup do
     Application.put_env(:magic_auth, :enable_rate_limit, false)

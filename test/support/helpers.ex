@@ -7,7 +7,13 @@ defmodule MagicAuthTest.Helpers do
     len |> :crypto.strong_rand_bytes() |> Base.url_encode64() |> binary_part(0, len)
   end
 
-  def use_tmp_dir() do
+  def use_tmp_dir(_opts) do
+    {previous_dir, tmp_dir} = create_tmp_dir()
+    ExUnit.Callbacks.on_exit(fn -> teardown_tmp_dir({previous_dir, tmp_dir}) end)
+    :ok
+  end
+
+  defp create_tmp_dir() do
     tmp_dir = Path.join([tmp_path(), random_string(10)])
 
     File.rm_rf!(tmp_dir)
@@ -18,7 +24,7 @@ defmodule MagicAuthTest.Helpers do
     {previous_dir, tmp_dir}
   end
 
-  def teardown_tmp_dir({previous_dir, tmp_dir}) do
+  defp teardown_tmp_dir({previous_dir, tmp_dir}) do
     File.cd!(previous_dir)
     File.rm_rf!(tmp_dir)
   end
@@ -33,18 +39,16 @@ defmodule MagicAuthTest.Helpers do
     end
   end
 
-  def restore_envs(previous_envs) do
+  def preserve_app_env(_opts) do
+    previous_envs = Application.get_all_env(:magic_auth)
+    ExUnit.Callbacks.on_exit(fn -> restore_envs(previous_envs) end)
+  end
+
+  defp restore_envs(previous_envs) do
     :magic_auth
     |> Application.get_all_env()
     |> Enum.each(fn {key, _value} -> Application.delete_env(:magic_auth, key) end)
 
     Application.put_all_env([{:magic_auth, previous_envs}])
-  end
-
-  defmacro preserve_app_env do
-    quote do
-      previous_envs = Application.get_all_env(:magic_auth)
-      on_exit(fn -> MagicAuthTest.Helpers.restore_envs(previous_envs) end)
-    end
   end
 end

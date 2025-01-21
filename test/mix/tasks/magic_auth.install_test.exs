@@ -5,13 +5,10 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
   import ExUnit.CaptureIO
   import MagicAuthTest.Helpers
 
-  setup do
-    preserve_app_env()
-  end
+  setup :preserve_app_env
+  setup :use_tmp_dir
 
   setup do
-    tmp = use_tmp_dir()
-
     Application.put_env(:magic_auth, :ecto_repos, [MagicAuthTest.Repo])
 
     File.mkdir_p!("config")
@@ -57,11 +54,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     end
     """)
 
-    on_exit(fn ->
-      teardown_tmp_dir(tmp)
-    end)
-
-    %{web_path: web_path, router_file_path: router_file_path, application_file_path: application_file_path, tmp: tmp}
+    %{web_path: web_path, router_file_path: router_file_path, application_file_path: application_file_path}
   end
 
   test "displays success message" do
