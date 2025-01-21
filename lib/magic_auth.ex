@@ -325,7 +325,7 @@ defmodule MagicAuth do
   def fetch_magic_auth_session(conn, _opts) do
     {session_token, conn} = ensure_user_session_token(conn)
     session = session_token && get_session_by_token(session_token)
-    assign(conn, :current_user_session, session)
+    assign(conn, :current_session, session)
   end
 
   defp ensure_user_session_token(conn) do
@@ -346,7 +346,7 @@ defmodule MagicAuth do
   Used for routes that require the authenticated sessions.
   """
   def require_authenticated(conn, _opts) do
-    if conn.assigns[:current_user_session] do
+    if conn.assigns[:current_session] do
       conn
     else
       conn
@@ -367,7 +367,7 @@ defmodule MagicAuth do
   Used for routes that require the user to not be authenticated.
   """
   def redirect_if_authenticated(conn, _opts) do
-    if conn.assigns[:current_user_session] do
+    if conn.assigns[:current_session] do
       conn
       |> redirect(to: MagicAuth.Config.router().__magic_auth__(:signed_in))
       |> halt()
@@ -376,14 +376,10 @@ defmodule MagicAuth do
     end
   end
 
-  def on_mount(:mount_current_user_session, _params, session, socket) do
-    {:cont, mount_current_user_session(socket, session)}
-  end
-
   def on_mount(:require_authenticated, _params, session, socket) do
-    socket = mount_current_user_session(socket, session)
+    socket = mount_magic_auth_session(socket, session)
 
-    if socket.assigns.current_user_session do
+    if socket.assigns.current_session do
       {:cont, socket}
     else
       socket =
@@ -396,17 +392,17 @@ defmodule MagicAuth do
   end
 
   def on_mount(:redirect_if_authenticated, _params, session, socket) do
-    socket = mount_current_user_session(socket, session)
+    socket = mount_magic_auth_session(socket, session)
 
-    if socket.assigns.current_user_session do
+    if socket.assigns.current_session do
       {:halt, Phoenix.LiveView.redirect(socket, to: MagicAuth.Config.router().__magic_auth__(:signed_in))}
     else
       {:cont, socket}
     end
   end
 
-  defp mount_current_user_session(socket, session) do
-    Phoenix.Component.assign_new(socket, :current_user_session, fn ->
+  defp mount_magic_auth_session(socket, session) do
+    Phoenix.Component.assign_new(socket, :current_session, fn ->
       if session_token = session["session_token"] do
         get_session_by_token(session_token)
       end

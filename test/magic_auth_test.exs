@@ -359,7 +359,7 @@ defmodule MagicAuthTest do
   describe "session authentication" do
     test "fetch_magic_auth_session returns nil when there is no token", %{conn: conn} do
       conn = MagicAuth.fetch_magic_auth_session(conn, [])
-      assert conn.assigns.current_user_session == nil
+      assert conn.assigns.current_session == nil
     end
 
     test "fetch_magic_auth_session loads session when token is valid", %{conn: conn} do
@@ -371,7 +371,7 @@ defmodule MagicAuthTest do
         |> put_session(:session_token, session.token)
         |> MagicAuth.fetch_magic_auth_session([])
 
-      assert %Session{email: ^email} = conn.assigns.current_user_session
+      assert %Session{email: ^email} = conn.assigns.current_session
     end
   end
 
@@ -395,7 +395,7 @@ defmodule MagicAuthTest do
       conn =
         conn
         |> put_session(:session_token, session.token)
-        |> assign(:current_user_session, %Session{email: email})
+        |> assign(:current_session, %Session{email: email})
         |> MagicAuth.require_authenticated([])
 
       refute conn.halted
@@ -412,20 +412,20 @@ defmodule MagicAuthTest do
         |> put_session(:session_token, session.token)
         |> MagicAuth.fetch_magic_auth_session([])
 
-      assert %Session{email: ^email} = conn.assigns.current_user_session
+      assert %Session{email: ^email} = conn.assigns.current_session
     end
 
     test "loads session from remember_me cookie when there is no session token", %{conn: conn, email: email, code: code} do
       conn = MagicAuth.log_in(conn, email, code)
       conn = MagicAuth.fetch_magic_auth_session(conn, [])
 
-      assert %Session{email: ^email} = conn.assigns.current_user_session
+      assert %Session{email: ^email} = conn.assigns.current_session
     end
 
     test "returns nil when there is no session token and no remember_me cookie", %{conn: conn} do
       conn = MagicAuth.fetch_magic_auth_session(conn, [])
 
-      assert conn.assigns.current_user_session == nil
+      assert conn.assigns.current_session == nil
     end
 
     test "returns nil when remember_me cookie token is invalid", %{conn: conn} do
@@ -434,7 +434,7 @@ defmodule MagicAuthTest do
         |> put_resp_cookie(MagicAuth.Config.remember_me_cookie(), "invalid_token", MagicAuth.remember_me_options())
         |> MagicAuth.fetch_magic_auth_session([])
 
-      assert conn.assigns.current_user_session == nil
+      assert conn.assigns.current_session == nil
     end
   end
 
@@ -442,31 +442,11 @@ defmodule MagicAuthTest do
     test "redirects when authenticated", %{conn: conn} do
       conn =
         conn
-        |> assign(:current_user_session, %Session{email: "test@example.com"})
+        |> assign(:current_session, %Session{email: "test@example.com"})
         |> MagicAuth.redirect_if_authenticated([])
 
       assert conn.halted
       assert redirected_to(conn) == MagicAuth.Config.router().__magic_auth__(:signed_in)
-    end
-  end
-
-  describe "on_mount :mount_current_user_session" do
-    test "assigns nil when there is no token" do
-      socket = %Phoenix.LiveView.Socket{}
-      session = %{}
-
-      assert {:cont, socket} = MagicAuth.on_mount(:mount_current_user_session, %{}, session, socket)
-      assert socket.assigns.current_user_session == nil
-    end
-
-    test "loads session when token is valid" do
-      socket = %Phoenix.LiveView.Socket{}
-      email = "test@example.com"
-      session = MagicAuth.create_session!(email)
-      session_data = %{"session_token" => session.token}
-
-      assert {:cont, socket} = MagicAuth.on_mount(:mount_current_user_session, %{}, session_data, socket)
-      assert %Session{email: ^email} = socket.assigns.current_user_session
     end
   end
 
@@ -481,7 +461,7 @@ defmodule MagicAuthTest do
       session = %{}
 
       assert {:halt, socket} = MagicAuth.on_mount(:require_authenticated, %{}, session, socket)
-      assert socket.assigns.current_user_session == nil
+      assert socket.assigns.current_session == nil
       assert socket.redirected == {:redirect, %{to: MagicAuth.Config.router().__magic_auth__(:log_in), status: 302}}
       assert Phoenix.Flash.get(socket.assigns.flash, :error) == "You must log in to access this page."
     end
@@ -493,7 +473,7 @@ defmodule MagicAuthTest do
       session_data = %{"session_token" => session.token}
 
       assert {:cont, socket} = MagicAuth.on_mount(:require_authenticated, %{}, session_data, socket)
-      assert %Session{email: ^email} = socket.assigns.current_user_session
+      assert %Session{email: ^email} = socket.assigns.current_session
     end
   end
 
@@ -513,7 +493,7 @@ defmodule MagicAuthTest do
       session = %{}
 
       assert {:cont, socket} = MagicAuth.on_mount(:redirect_if_authenticated, %{}, session, socket)
-      assert socket.assigns.current_user_session == nil
+      assert socket.assigns.current_session == nil
     end
   end
 
@@ -529,7 +509,7 @@ defmodule MagicAuthTest do
         |> put_session(:session_token, session.token)
         |> MagicAuth.fetch_magic_auth_session([])
 
-      assert conn.assigns.current_user_session == nil
+      assert conn.assigns.current_session == nil
     end
   end
 
