@@ -44,7 +44,11 @@ defmodule E2E.Mix.Tasks.MagicAuth.InstallUmbrellaTest do
   @tag :e2e
   test "creates magic_auth callbacks" do
     callback_file = Path.join([@web_project_path, "lib", @web_project_name, "magic_auth.ex"])
+
     assert File.exists?(callback_file)
+
+    callback_file_contents = File.read!(callback_file)
+    assert String.contains?(callback_file_contents, "MagicAuthTest.Mailer")
   end
 
   @tag :e2e

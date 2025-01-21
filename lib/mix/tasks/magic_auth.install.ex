@@ -125,7 +125,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
       "#{@template_dir}/magic_auth.ex.eex",
       Mix.Phoenix.context_app() |> Mix.Phoenix.web_path("magic_auth.ex"),
       web_module: web_module(),
-      base: Mix.Phoenix.base()
+      base: Mix.Phoenix.context_app() |> Mix.Phoenix.context_base()
     )
   end
 
