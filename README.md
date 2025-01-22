@@ -1,4 +1,5 @@
-# Magic Auth
+# 🔒 Magic Auth
+
 Magic Auth is an authentication library for Phoenix that provides effortless configuration and flexibility for your project.
 
 ![Magic Auth in action](https://github.com/user-attachments/assets/b9ccbb5d-4f42-48c6-9847-af51fec5b155)
