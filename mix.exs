@@ -8,7 +8,8 @@ defmodule MagicAuth.MixProject do
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      docs: &docs/0
     ]
   end
 
@@ -35,7 +36,15 @@ defmodule MagicAuth.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:mix_test_watch, "~> 1.2", only: [:dev], runtime: false},
       {:bcrypt_elixir, "~> 3.1"},
-      {:mox, "~> 1.0", only: :test}
+      {:mox, "~> 1.0", only: :test},
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      extras: ["README.md", "CHANGELOG.md", "LICENSE"]
     ]
   end
 end
