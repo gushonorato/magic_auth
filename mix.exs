@@ -1,15 +1,19 @@
 defmodule MagicAuth.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+  @scm_url "https://github.com/gushonorato/magic_auth"
+
   def project do
     [
       app: :magic_auth,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      docs: &docs/0
+      docs: docs(),
+      package: package()
     ]
   end
 
@@ -43,8 +47,23 @@ defmodule MagicAuth.MixProject do
 
   defp docs do
     [
-      main: "readme",
-      extras: ["README.md", "CHANGELOG.md", "LICENSE"]
+      source_ref: "v#{@version}",
+      assets: %{"guides/assets" => "assets"},
+      main: "getting_started",
+      extras: [
+        "guides/getting_started.md",
+        "CHANGELOG.md",
+        "LICENSE"
+      ]
+    ]
+  end
+
+  defp package do
+    [
+      maintainers: ["Gustavo Honorato"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => @scm_url},
+      files: ~w(assets/js lib priv CHANGELOG.md LICENSE.md mix.exs package.json README.md .formatter.exs)
     ]
   end
 end
