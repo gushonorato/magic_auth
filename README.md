@@ -58,12 +58,13 @@ defmodule MyAppWeb.Router do
   # Additional router contents...
 
   scope "/", MyAppWeb do
-    # Use MagicAuth.require_authenticated/2 plug to protect controllers
+    # Add MagicAuth.require_authenticated/2 plug to protect controllers
+    # and LiveView first mount (disconnected)
     pipe_through [:browser, :require_authenticated]
 
     get "/protected_controller", ProtectedController, :index
 
-    # Use MagicAuth.required_authenticated/4 to protect LiveViews
+    # Use MagicAuth.required_authenticated/4 to protect LiveView's socket connection
     live_session :authenticated, on_mount: [{MagicAuth, :require_authenticated}] do
       live "/protected_live_view", ProtectedLiveView
     end
