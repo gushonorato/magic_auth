@@ -1,6 +1,16 @@
 defmodule MagicAuth do
   @moduledoc """
-  Documentation for `MagicAuth`.
+  MagicAuth is an authentication library for Phoenix that provides effortless configuration and flexibility for your project.
+
+  Key Features:
+
+  - **Passwordless Authentication**: Secure login process through one-time passwords sent via email
+  - **Enhanced Security**: Protect your application from brute force attacks with built-in rate limiting and account lockout mechanisms
+  - **Customizable Interface**: Fully customizable UI components to match your design
+  - **Effortless Configuration**: Quick and simple integration with your Phoenix project
+  - **Schema Agnostic**: Implement authentication without requiring a user schema - ideal for everything from MVPs to complex applications
+
+  To get started, see the installation documentation in `MagicAuth.MixProject`.
   """
 
   import Ecto.Query
@@ -251,6 +261,7 @@ defmodule MagicAuth do
     end
   end
 
+  @doc false
   def remember_me_options() do
     [sign: true, max_age: MagicAuth.Config.session_validity_in_days() * 24 * 60 * 60, same_site: "Lax"]
   end
@@ -433,7 +444,7 @@ defmodule MagicAuth do
   defmodule MyAppWeb.DashboardLive do
     use MyAppWeb, :live_view
 
-    on_mount MagicAuth, :require_authenticated
+    on_mount {MagicAuth, :require_authenticated}
 
     def mount(_params, _session, socket) do
       {:ok, socket}
