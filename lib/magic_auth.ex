@@ -23,6 +23,10 @@ defmodule MagicAuth do
   to the configured callback module `one_time_password_requested/2` which should handle
   sending it to the user via email.
 
+  One-time password generation is rate limited using a token bucket system that allows a maximum of
+  1 generation request per minute for each email address. This prevents abuse of the email delivery
+  service.
+
   ## Parameters
 
     * `attrs` - A map containing `:email`
@@ -102,6 +106,22 @@ defmodule MagicAuth do
     end
   end
 
+  @doc """
+  Verifies a one-time password for a given email.
+
+  Takes an email and password as input and validates the one-time password.
+
+  Returns:
+  - `{:ok, one_time_password}` if the password is valid
+  - `{:error, :invalid_code}` if the password is invalid or no password exists for email
+  - `{:error, :code_expired}` if the password has expired
+
+  The function:
+  1. Looks up the one-time password record for the given email
+  2. Returns error if no password exists (with timing attack protection)
+  3. Checks if password has expired based on configured expiration time
+  4. Verifies the provided password matches the stored hash
+  """
   def verify_password(email, password) do
     one_time_password = MagicAuth.Config.repo_module().get_by(OneTimePassword, email: email)
 
@@ -292,7 +312,7 @@ defmodule MagicAuth do
   end
 
   @doc """
-  Deletes the signed token with the given context.
+  Deletes all sessions associated with a given token.
   """
   def delete_all_sessions_by_token(token) do
     MagicAuth.Config.repo_module().delete_all(from s in Session, where: s.token == ^token)
@@ -343,7 +363,29 @@ defmodule MagicAuth do
   end
 
   @doc """
-  Used for routes that require the authenticated sessions.
+  Plug function that verifies if the user is authenticated.
+
+  If the user is not authenticated:
+  - Stores the current URL in the session for later redirect
+  - Redirects to the login page (defaults to: /session/log_in)
+  - Shows unauthorized error message
+  - Halts request processing
+
+  If the user is authenticated:
+  - Allows the request to continue normally with the session information
+  - The current_session is available in conn.assigns[:current_session]
+
+  ## Examples of usage
+
+  In router.ex routes:
+  ```elixir
+  scope "/", MyAppWeb do
+    pipe_through [:browser, :require_authenticated]
+
+    get "/dashboard", DashboardController, :index
+    live "/profile", ProfileLive
+  end
+  ```
   """
   def require_authenticated(conn, _opts) do
     if conn.assigns[:current_session] do
@@ -376,6 +418,37 @@ defmodule MagicAuth do
     end
   end
 
+  @doc """
+    Mount function for LiveViews that require authentication.
+
+    This function:
+    1. Mounts the user session on the socket
+    2. Continues the mount flow if user is authenticated
+    3. Halts and redirects to login page if user is not authenticated
+
+  ## Examples of usage
+
+  In LiveView modules:
+  ```elixir
+  defmodule MyAppWeb.DashboardLive do
+    use MyAppWeb, :live_view
+
+    on_mount MagicAuth, :require_authenticated
+
+    def mount(_params, _session, socket) do
+      {:ok, socket}
+    end
+  end
+  ```
+
+  In router.ex:
+  ```elixir
+  live_session :admin,
+    on_mount: [{MagicAuth, :require_authenticated}] do
+    live "/dashboard", DashboardLive
+  end
+  ```
+  """
   def on_mount(:require_authenticated, _params, session, socket) do
     socket = mount_magic_auth_session(socket, session)
 
@@ -391,6 +464,51 @@ defmodule MagicAuth do
     end
   end
 
+  @doc """
+  Mount function for LiveViews that should redirect to the signed in URL if user is already authenticated.
+
+  > Note: This function is used by the `MagicAuth.Router.magic_auth/1` macro to redirect users who attempt to access
+  > the login page while already authenticated. Client applications generally don't need to use this function directly.
+
+  This function:
+  1. Mounts the user session on the socket
+  2. Continues the mount flow if user is not authenticated
+  3. Halts and redirects to the signed in URL if user is authenticated
+
+  The signed in URL can be configured in the router using the `magic_auth` macro:
+
+  ```elixir
+  defmodule MyAppWeb.Router do
+    use MyAppWeb, :router
+    use MagicAuth.Router
+
+    magic_auth(signed_in_path: "/dashboard")
+  end
+  ```
+
+  ## Examples of usage
+
+  In LiveView modules:
+  ```elixir
+  defmodule MyAppWeb.LoginLive do
+    use MyAppWeb, :live_view
+
+    on_mount MagicAuth, :redirect_if_authenticated
+
+    def mount(_params, _session, socket) do
+      {:ok, socket}
+    end
+  end
+  ```
+
+  In router.ex:
+  ```elixir
+  live_session :unauthenticated,
+    on_mount: [{MagicAuth, :redirect_if_authenticated}] do
+    live "/login", LoginLive
+  end
+  ```
+  """
   def on_mount(:redirect_if_authenticated, _params, session, socket) do
     socket = mount_magic_auth_session(socket, session)
 
@@ -408,6 +526,21 @@ defmodule MagicAuth do
       end
     end)
   end
+
+  @doc """
+  Returns a list of child processes that should be supervised.
+
+  Includes token buckets needed for rate limiting:
+  - OneTimePasswordRequestTokenBucket: Limits one-time password requests
+  - LoginAttemptTokenBucket: Limits login attempts
+
+  ## Example
+
+  In your application.ex (this configuration is automatically added by the `mix magic_auth.install` task):
+  ```elixir
+  children = children ++ MagicAuth.children()
+  ```
+  """
 
   def children do
     [
