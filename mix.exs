@@ -13,7 +13,8 @@ defmodule MagicAuth.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       docs: docs(),
-      package: package()
+      package: package(),
+      description: "An Elixir authentication library designed for effortless setup",
     ]
   end
 
@@ -53,7 +54,7 @@ defmodule MagicAuth.MixProject do
       extras: [
         "guides/getting_started.md",
         "CHANGELOG.md",
-        "LICENSE"
+        "LICENSE.md"
       ]
     ]
   end
