@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches:
+        - main
+  pull_request:
+    branches:
+        - main
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        elixir: ['1.18.2']
+        otp: ['27.2']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore deps and _build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}
+
+      - name: Install Phoenix installer
+        run: mix archive.install hex phx_new 1.7.18 --force
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Setup test DB
+        run: mix magic_auth.setup_test_db
+
+      - name: Run tests
+        run: mix test
+
+    services:
+      postgres:
+        image: postgres
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: postgres
