@@ -15,8 +15,8 @@ defmodule MagicAuthTest do
   setup do
     Application.put_env(:magic_auth, :enable_rate_limit, false)
 
-    Mox.stub(MagicAuthTestWeb.CallbacksMock, :one_time_password_requested, fn _code, _one_time_password -> :ok end)
-    Mox.stub(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn _email -> :allow end)
+    Mox.stub(MagicAuthTestWeb.CallbacksMock, :one_time_password_requested, fn _params -> :ok end)
+    Mox.stub(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn _params -> :allow end)
 
     conn =
       build_conn()
@@ -83,8 +83,8 @@ defmodule MagicAuthTest do
     test "calls one_time_password_requested callback" do
       email = "user@example.com"
 
-      expect(MagicAuthTestWeb.CallbacksMock, :one_time_password_requested, fn _code, on_time_password ->
-        assert on_time_password.email == email
+      expect(MagicAuthTestWeb.CallbacksMock, :one_time_password_requested, fn %{email: rec_email} ->
+        assert rec_email == email
         :ok
       end)
 
@@ -278,7 +278,7 @@ defmodule MagicAuthTest do
     end
 
     test "redirects to signed_in when log_in_requested returns :allow", %{conn: conn, code: code, email: email} do
-      Mox.expect(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn ^email -> :allow end)
+      Mox.expect(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn %{email: ^email} -> :allow end)
 
       conn = MagicAuth.log_in(conn, email, code)
 
@@ -287,7 +287,7 @@ defmodule MagicAuthTest do
     end
 
     test "redirects to log_in when log_in_requested returns :deny", %{conn: conn, code: code, email: email} do
-      Mox.expect(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn ^email -> :deny end)
+      Mox.expect(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn %{email: ^email} -> :deny end)
       Mox.expect(MagicAuthTestWeb.CallbacksMock, :translate_error, fn :access_denied, _opts -> "Access denied" end)
 
       conn = conn |> fetch_flash() |> MagicAuth.log_in(email, code)

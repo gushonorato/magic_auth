@@ -26,7 +26,7 @@ defmodule <%= @web_module %>.MagicAuth do
   #
   # - The log in form appearance by modifying `log_in_form/1`
   # - The verification form appearance by modifying `verify_form/1`
-  # - Email templates by modifying `one_time_password_requested/2`, `text_email_body/1` and `html_email_body/1`
+  # - Email templates by modifying `one_time_password_requested/1`, `text_email_body/1` and `html_email_body/1`
   # - Access control logic by modifying `log_in_requested/1`
   # - Error message translations by modifying `translate_error/1`
   #
@@ -193,10 +193,13 @@ defmodule <%= @web_module %>.MagicAuth do
 #
 #  ## Parameters
 #
-#    * `code` - The one-time password code generated to be sent via email
-#    * `one_time_password` - The `OneTimePassword` struct containing the user's email
+#  Receives a map containing:
+#
+#    * `:code` - The one-time password code generated to be sent via email
+#    * `:email` - The user's email address where the code will be sent
+#
   @impl true
-  def one_time_password_requested(code, %MagicAuth.OneTimePassword{email: email}) do
+  def one_time_password_requested(%{code: code, email: email}) do
     Swoosh.Email.new()
     |> Swoosh.Email.to(email)
     |> Swoosh.Email.from({"Sender name", "noreply@example.com"})
@@ -281,7 +284,7 @@ defmodule <%= @web_module %>.MagicAuth do
   #
   # ```
   # # Allow only company emails
-  # def log_in_requested(email) do
+  # def log_in_requested(%{email: email}) do
   #   if String.ends_with?(email, "@mycompany.com") do
   #     :allow
   #   else
@@ -290,13 +293,13 @@ defmodule <%= @web_module %>.MagicAuth do
   # end
   #
   # # Allow only whitelisted emails
-  # def log_in_requested(email) do
+  # def log_in_requested(%{email: email}) do
   #   allowed_emails = ["admin@example.com", "user@example.com"]
   #   if email in allowed_emails, do: :allow, else: :deny
   # end
   #
   # # Allow only users that exist in the database
-  # def log_in_requested(email) do
+  # def log_in_requested(%{email: email}) do
   #   case Repo.get_by(User, email: email) do
   #     nil -> :deny  # User not found in database
   #     _user -> :allow  # User exists in database
@@ -306,14 +309,14 @@ defmodule <%= @web_module %>.MagicAuth do
   #
   # ## Parameters
   #
-  #   * `email` - The email address requesting log in
+  #   * `data` - A map containing the `:email` field of the user requesting log in
   #
   # ## Returns
   #
   #   * `:allow` - Allow user to access the application
   #   * `:deny` - Deny the log in request
   @impl true
-  def log_in_requested(_email), do: :allow
+  def log_in_requested(%{email: _email}), do: :allow
 
   # Translates error messages for the authentication system.
   @impl true

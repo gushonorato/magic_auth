@@ -20,7 +20,7 @@ defmodule MagicAuth do
 
   When called, this function creates a new one_time_password record and generates
   a one-time password that will be used to authenticate it. The password is then passed
-  to the configured callback module `one_time_password_requested/2` which should handle
+  to the configured callback module `one_time_password_requested/1` which should handle
   sending it to the user via email.
 
   One-time password generation is rate limited using a token bucket system that allows a maximum of
@@ -56,7 +56,7 @@ defmodule MagicAuth do
   3. Generates a new random numeric password
   4. Encrypts the password using Bcrypt
   5. Stores the hash in the database
-  6. Calls the configured callback module's `one_time_password_requested/2` function
+  6. Calls the configured callback module's `one_time_password_requested/1` function
      which should handle sending the password to the user via email
   """
   def create_one_time_password(attrs) do
@@ -98,7 +98,7 @@ defmodule MagicAuth do
     |> MagicAuth.Config.repo_module().transaction()
     |> case do
       {:ok, %{insert_one_time_passwords: one_time_password}} ->
-        MagicAuth.Config.callback_module().one_time_password_requested(code, one_time_password)
+        MagicAuth.Config.callback_module().one_time_password_requested(%{code: code, email: one_time_password.email})
         {:ok, code, one_time_password}
 
       {:error, _failed_operation, failed_value, _changes_so_far} ->
@@ -220,7 +220,7 @@ defmodule MagicAuth do
   end
 
   defp perform_log_in(conn, email) do
-    case MagicAuth.Config.callback_module().log_in_requested(email) do
+    case MagicAuth.Config.callback_module().log_in_requested(%{email: email}) do
       :allow ->
         session = create_session!(email)
         return_to = get_session(conn, :session_return_to)
@@ -464,51 +464,6 @@ defmodule MagicAuth do
     end
   end
 
-  @doc """
-  Mount function for LiveViews that should redirect to the signed in URL if user is already authenticated.
-
-  > Note: This function is used by the `MagicAuth.Router.magic_auth/1` macro to redirect users who attempt to access
-  > the login page while already authenticated. Client applications generally don't need to use this function directly.
-
-  This function:
-  1. Mounts the user session on the socket
-  2. Continues the mount flow if user is not authenticated
-  3. Halts and redirects to the signed in URL if user is authenticated
-
-  The signed in URL can be configured in the router using the `magic_auth` macro:
-
-  ```elixir
-  defmodule MyAppWeb.Router do
-    use MyAppWeb, :router
-    use MagicAuth.Router
-
-    magic_auth(signed_in_path: "/dashboard")
-  end
-  ```
-
-  ## Examples of usage
-
-  In LiveView modules:
-  ```elixir
-  defmodule MyAppWeb.LoginLive do
-    use MyAppWeb, :live_view
-
-    on_mount MagicAuth, :redirect_if_authenticated
-
-    def mount(_params, _session, socket) do
-      {:ok, socket}
-    end
-  end
-  ```
-
-  In router.ex:
-  ```elixir
-  live_session :unauthenticated,
-    on_mount: [{MagicAuth, :redirect_if_authenticated}] do
-    live "/login", LoginLive
-  end
-  ```
-  """
   def on_mount(:redirect_if_authenticated, _params, session, socket) do
     socket = mount_magic_auth_session(socket, session)
 
