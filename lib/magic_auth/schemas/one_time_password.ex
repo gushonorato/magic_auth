@@ -1,4 +1,15 @@
 defmodule MagicAuth.OneTimePassword do
+  @moduledoc """
+  Ecto schema representing one-time passwords.
+
+  This module defines the data structure for one-time passwords, including the user's email and the
+  encrypted password. It also provides functions to generate one-time passwords and to create changesets
+  for data validation.
+
+  The one-time password is generated based on the length configuration defined in
+  `MagicAuth.Config.one_time_password_length()`. The password is composed only of numeric digits and is
+  generated randomly using a strong random number generator.
+  """
   use Ecto.Schema
   import Ecto.Changeset
 

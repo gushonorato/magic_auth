@@ -18,17 +18,9 @@ defmodule MagicAuth.Router do
     magic_auth()
 
     # Or with custom configuration
-    magic_auth("/auth", login: "/entrar", password: "/senha")
+    magic_auth("/auth", log_in: "/entrar", password: "/senha", log_out: "/sair")
   end
   ```
-
-  ## Generated Routes
-
-  By default, the module generates the following routes:
-
-  - `/sessions/login` - Login page
-  - `/sessions/password` - Password page
-  - `/sessions/verify` - Verify controller
 
   For more information about path customization, see the `magic_auth/2` macro.
 
@@ -40,14 +32,16 @@ defmodule MagicAuth.Router do
   - `__magic_auth__(:log_in, query)` - Returns the login path with optional query parameters
   - `__magic_auth__(:password, query)` - Returns the password path with optional query parameters
   - `__magic_auth__(:verify, query)` - Returns the verify path with optional query parameters
+  - `__magic_auth__(:log_out, query)` - Returns the log out path with optional query parameters
   - `__magic_auth__(:signed_in, query)` - Returns the signed in path with optional query parameters
 
   The `query` parameter is an optional map that allows adding query parameters to the generated URLs.
 
   ### Example
-
+  ```elixir
     __magic_auth__(:log_in, %{foo: "bar", foo: "bar"})
     # Returns: "/sessions/login?foo=bar
+  ```
   """
   defmacro __using__(_opts) do
     quote do
@@ -69,27 +63,47 @@ defmodule MagicAuth.Router do
       * `:log_out` - Path for log out controller. Default: "/log_out"
       * `:signed_in` - Path for signed in page. Default: "/"
 
-  ## Example
+  ## Default configuration
 
-      # Default configuration
+  ```elixir
+  magic_auth()
+  ```
 
-      magic_auth()
+  Generates the following default routes:
+  - /sessions/log_in
+  - /sessions/password
+  - /sessions/verify
+  - /sessions/log_out
 
-      # Generates:
-      # /sessions/log_in
-      # /sessions/password
-      # /sessions/verify
-      # /sessions/log_out
+  ## Custom configuration
 
-      # Custom configuration
+  ```
+  magic_auth("/auth", log_in: "/entrar", password: "/senha", verify: "/verificar", log_out: "/sair")
+  ```
 
-      magic_auth("/auth", log_in: "/entrar", password: "/senha", verify: "/verificar", log_out: "/sair")
+  Generates the following custom routes:
+  - /auth/entrar
+  - /auth/senha
+  - /auth/verificar
+  - /auth/sair
 
-      # Generates:
-      # /auth/entrar
-      # /auth/senha
-      # /auth/verificar
-      # /auth/sair
+
+  ## Customizing the default sign in path
+
+  The default sign in path can be customized by passing the `:signed_in` parameter in the `magic_auth` macro call.
+  This allows developers to define a custom path for the sign in page after authentication.
+
+  Note that Magic Auth will redirect users to their requested page. If no specific page is requested, users will
+  be redirected to the route configured in the `signed_in` option. For example, if a user accesses the application
+  by visiting the `/sessions/log_in` page, they will be redirected to the `signed_in` route after the successful
+  log in.
+
+  Example:
+  ```
+  magic_auth("/auth", signed_in: "/dashboard")
+  ```
+  This will generate a custom sign in path to `/dashboard` instead of the default `/`.
+
   """
   defmacro magic_auth(scope \\ "/sessions", opts \\ []) do
     log_in = Keyword.get(opts, :log_in, "/log_in")

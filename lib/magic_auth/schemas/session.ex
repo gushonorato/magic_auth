@@ -1,4 +1,10 @@
 defmodule MagicAuth.Session do
+  @moduledoc """
+  Ecto schema representing user sessions.
+
+  This module defines the data structure for user sessions, including the user's email and the session token.
+  It also provides functions to generate session tokens and verify them.
+  """
   use Ecto.Schema
   import Ecto.Query
 
