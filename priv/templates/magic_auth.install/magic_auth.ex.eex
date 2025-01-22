@@ -79,7 +79,7 @@ defmodule <%= @web_module %>.MagicAuth do
     """
   end
 
-    attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the One Time Password code"
+  attr :form, :any, required: true, doc: "the Phoenix.HTML.Form for the One Time Password code"
   attr :error, :string, required: true, doc: "error message to display if verification fails"
   attr :flash, :map, required: true, doc: "the flash messages to display"
   attr :email, :string, required: true, doc: "the user's email to which the code was sent"
