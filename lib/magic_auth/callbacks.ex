@@ -1,4 +1,6 @@
 defmodule MagicAuth.Callbacks do
+  @moduledoc false
+
   @callback log_in_form(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
   @callback verify_form(assigns :: map()) :: Phoenix.LiveView.Rendered.t()
   @callback one_time_password_requested(data :: map()) :: any

@@ -1,4 +1,5 @@
 defmodule MagicAuth.Config do
+  @moduledoc false
   def one_time_password_length, do: Application.get_env(:magic_auth, :one_time_password_length, 6)
   def one_time_password_expiration, do: Application.get_env(:magic_auth, :one_time_password_expiration, 10)
 

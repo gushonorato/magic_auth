@@ -1,4 +1,6 @@
 defmodule MagicAuth.SessionController do
+  @moduledoc false
+
   use Phoenix.Controller
   import Plug.Conn
 

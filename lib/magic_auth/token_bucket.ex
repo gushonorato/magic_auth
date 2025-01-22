@@ -1,4 +1,6 @@
 defmodule MagicAuth.TokenBucket do
+  @moduledoc false
+
   defmacro __using__(config \\ []) do
     quote bind_quoted: [config: config] do
       use GenServer

@@ -1,4 +1,6 @@
 defmodule MagicAuth.PasswordLive do
+  @moduledoc false
+
   use Phoenix.LiveView
   alias MagicAuth.OneTimePassword
   alias MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket
