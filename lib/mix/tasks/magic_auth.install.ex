@@ -172,13 +172,14 @@ defmodule Mix.Tasks.MagicAuth.Install do
     with {:ok, router_file_content} <- File.read(router_file()),
          :not_injected <- check_if_injected(router_file_content, "plug :fetch_magic_auth_session"),
          true <- String.contains?(router_file_content, "plug :put_secure_browser_headers") do
-
-      router_file_content = String.replace(router_file_content,
-      "plug :put_secure_browser_headers",
-      "plug :put_secure_browser_headers\n    plug :fetch_magic_auth_session")
+      router_file_content =
+        String.replace(
+          router_file_content,
+          "plug :put_secure_browser_headers",
+          "plug :put_secure_browser_headers\n    plug :fetch_magic_auth_session"
+        )
 
       File.write!(router_file(), router_file_content)
-
     else
       :already_injected ->
         :ok
@@ -194,7 +195,6 @@ defmodule Mix.Tasks.MagicAuth.Install do
         """)
     end
   end
-
 
   defp install_token_buckets() do
     Mix.shell().info(IO.ANSI.cyan() <> "* injecting " <> IO.ANSI.reset() <> "#{application_file()}")
