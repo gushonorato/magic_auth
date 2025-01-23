@@ -9,7 +9,7 @@ Magic Auth is an authentication library for Phoenix that provides effortless con
 - **Ship Faster** 🚀: No time wasted configuring password resets and recovery flows - just implement and ship your product.
 - **Passwordless Authentication** 📨: Secure login process through one-time passwords sent via email. One-time passwords are better than magic links because users can receive the code on one device (e.g., phone email) and enter it on another (e.g., desktop browser).
 - **Enhanced Security** 🔒: Protect your application from brute force attacks with built-in rate limiting and account lockout mechanisms.
-- **Customizable Interface** 🎨: Fully customizable UI components to match your design.
+- **Customizable Interface 🎨:** Use the beautiful default UI components out of the box, or customize them fully to match your design perfectly.
 - **Effortless Configuration and Comprehensive Documentation** 📚: Quick and simple integration with your Phoenix project, with detailed guides and references to assist you through every step of the integration process.
 - **Schema Agnostic** 👤: Implement authentication without requiring a user schema - ideal for everything from MVPs to complex applications.
 
