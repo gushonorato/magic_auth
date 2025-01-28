@@ -145,7 +145,8 @@ defmodule MagicAuth do
         {:error, :code_expired}
 
       Bcrypt.verify_pass(password, one_time_password.hashed_password) ->
-        {:ok, one_time_password}
+        deleted_one_time_password = MagicAuth.Config.repo_module().delete!(one_time_password)
+        {:ok, deleted_one_time_password}
 
       true ->
         {:error, :invalid_code}
