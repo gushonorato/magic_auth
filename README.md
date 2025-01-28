@@ -79,8 +79,8 @@ be found at <https://hexdocs.pm/magic_auth>.
 ## Support This Project
 
 If you find Magic Auth helpful, show your support by:
-	•	Starring ⭐ the project on GitHub
-	•	Following me on X (formerly Twitter): @gushonorato
+- Starring ⭐ the project on GitHub
+- Following me on X (formerly Twitter): @gushonorato
 
 ## Acknowledgements
 
