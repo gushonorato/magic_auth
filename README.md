@@ -76,6 +76,10 @@ Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_do
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at <https://hexdocs.pm/magic_auth>.
 
+## Support This Project
+
+If you find Magic Auth helpful, show your appreciation by starring ⭐ the project on GitHub.
+
 ## Acknowledgements
 
 Much of the code in this library is based on the `mix phx.gen.auth` generator. Special thanks to all the contributors of `mix phx.gen.auth` for their hard work and dedication in creating such a valuable tool for the Phoenix community. Your efforts have significantly inspired and influenced the development of Magic Auth.
