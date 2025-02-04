@@ -197,6 +197,26 @@ defmodule MagicAuthTest do
     test "returns error when email does not exist" do
       assert {:error, :invalid_code} = MagicAuth.verify_password("nonexistent@example.com", "123456")
     end
+
+    test "deletes one time password once verified" do
+      email = "test@example.com"
+      password = "123456"
+      hashed_password = Bcrypt.hash_pwd_salt(password)
+
+      # Create a valid one_time_password
+      one_time_password =
+        %OneTimePassword{
+          email: email,
+          hashed_password: hashed_password,
+          inserted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        }
+        |> MagicAuth.Config.repo_module().insert!()
+
+      assert {:ok, returned_one_time_password} = MagicAuth.verify_password(email, password)
+      assert returned_one_time_password.id == one_time_password.id
+
+      refute MagicAuth.Config.repo_module().get(OneTimePassword, one_time_password.id)
+    end
   end
 
   describe "one_time_password_length/0" do

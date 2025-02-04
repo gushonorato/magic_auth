@@ -133,8 +133,31 @@ defmodule MagicAuth do
   4. Verifies the provided password matches the stored hash
   """
   def verify_password(email, password) do
-    one_time_password = MagicAuth.Config.repo_module().get_by(OneTimePassword, email: email)
+    Multi.new()
+    |> Multi.run(:one_time_password, fn _repo, _changes ->
+      otp =
+        from(otp in OneTimePassword, where: otp.email == ^email, lock: "FOR UPDATE")
+        |> MagicAuth.Config.repo_module().one()
 
+      {:ok, otp}
+    end)
+    |> Multi.run(:verify_password, fn _repo, %{one_time_password: one_time_password} ->
+      do_verify_password(one_time_password, password)
+    end)
+    |> Multi.delete(:delete_one_time_password, fn %{one_time_password: one_time_password} ->
+      one_time_password
+    end)
+    |> MagicAuth.Config.repo_module().transaction()
+    |> case do
+      {:ok, %{delete_one_time_password: deleted_one_time_password}} ->
+        {:ok, deleted_one_time_password}
+
+      {:error, :verify_password, error, _changes} ->
+        {:error, error}
+    end
+  end
+
+  defp do_verify_password(one_time_password, password) do
     cond do
       is_nil(one_time_password) ->
         Bcrypt.no_user_verify()
@@ -145,8 +168,7 @@ defmodule MagicAuth do
         {:error, :code_expired}
 
       Bcrypt.verify_pass(password, one_time_password.hashed_password) ->
-        deleted_one_time_password = MagicAuth.Config.repo_module().delete!(one_time_password)
-        {:ok, deleted_one_time_password}
+        {:ok, one_time_password}
 
       true ->
         {:error, :invalid_code}

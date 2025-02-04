@@ -11,6 +11,7 @@ defmodule MagicAuth.SessionControllerTest do
     Application.put_env(:magic_auth, :enable_rate_limit, false)
 
     Mox.stub(MagicAuthTestWeb.CallbacksMock, :one_time_password_requested, fn _params -> :ok end)
+    Mox.stub(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn _params -> :allow end)
 
     conn = build_conn() |> Plug.Test.init_test_session(%{})
 
@@ -57,6 +58,26 @@ defmodule MagicAuth.SessionControllerTest do
         })
 
       assert redirected_to(conn) == Router.__magic_auth__(:password, %{email: email, error: :code_expired})
+    end
+
+    test "does not allow a code to be used twice", %{conn: conn, email: email} do
+      {:ok, code, _one_time_password} = MagicAuth.create_one_time_password(%{"email" => email})
+
+      conn =
+        get(conn, Router.__magic_auth__(:verify), %{
+          "email" => email,
+          "code" => code
+        })
+
+      assert redirected_to(conn) == "/"
+
+      conn =
+        get(conn, Router.__magic_auth__(:verify), %{
+          "email" => email,
+          "code" => code
+        })
+
+      assert redirected_to(conn) == Router.__magic_auth__(:password, %{email: email, error: :invalid_code})
     end
 
     test "logs in when code is valid", %{conn: conn, email: email} do
