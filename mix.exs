@@ -14,7 +14,7 @@ defmodule MagicAuth.MixProject do
       deps: deps(),
       docs: docs(),
       package: package(),
-      description: "An Elixir authentication library designed for effortless setup",
+      description: "An Elixir authentication library designed for effortless setup"
     ]
   end
 
