@@ -74,6 +74,16 @@ end
 
 For more details, refer to `MagicAuth.require_authenticated/2` and `MagicAuth.on_mount/4`.
 
+## Creating a log out link
+
+After setting up authentication, you must provide users with a way to log out. MagicAuth provides helper functions to generate the correct path for this action:
+
+```elixir
+<.link method="delete" href={MyAppWeb.Router.__magic_auth__(:log_out)}>Logout</.link>
+```
+
+See all generated routes in [Introspection Functions](/magic_auth/MagicAuth.Router.html#module-introspection-functions) section of the `MagicAuth.Router` documentation.
+
 ## Customization
 The generator will create a file at `lib/my_app_web/magic_auth.ex` (or at `apps/my_app_web/lib/my_app_web/magic_auth.ex` in an umbrella project). This file contains several callbacks that you can modify to match your application's needs. It is filled with comprehensive comments that guide you through customizing both the appearance and behavior of Magic Auth. For detailed instructions, please refer to the comments in the generated file. Below is a brief explanation of what can be customized:
 
