@@ -54,7 +54,25 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     end
     """)
 
-    %{web_path: web_path, router_file_path: router_file_path, application_file_path: application_file_path}
+    js_file_path = "assets/js/app.js"
+    File.mkdir_p!("assets/js")
+
+    File.write!(js_file_path, """
+    import {Socket} from "phoenix"
+    import {LiveSocket} from "phoenix_live_view"
+
+    let liveSocket = new LiveSocket("/live", Socket, {
+      longPollFallbackMs: 2500,
+      params: {_csrf_token: csrfToken}
+    })
+    """)
+
+    %{
+      web_path: web_path,
+      router_file_path: router_file_path,
+      application_file_path: application_file_path,
+      js_file_path: js_file_path
+    }
   end
 
   test "displays success message" do
@@ -215,13 +233,15 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     end
     """)
 
-    output =
-      capture_io(fn ->
-        run([])
-      end)
+    capture_io(fn ->
+      output =
+        capture_io(:stderr, fn ->
+          run([])
+        end)
 
-    assert output =~ "The task was unable to add some configuration to your router.ex"
-    assert output =~ "You should manually add the following code to your router.ex"
+      assert output =~ "The task was unable to add some configuration to your router.ex"
+      assert output =~ "You should manually add the following code to your router.ex"
+    end)
   end
 
   test "installs token buckets configuration", %{application_file_path: application_file_path} do
@@ -238,9 +258,9 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
                  MagicAuthTest.Repo,
                  MagicAuthTestWeb.Endpoint
                ]
-               children = children ++ MagicAuth.children()
 
                opts = [strategy: :one_for_one, name: MagicAuthTest.Supervisor]
+               children = children ++ MagicAuth.children()
                Supervisor.start_link(children, opts)
              end
            end
@@ -289,25 +309,19 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     end
     """)
 
-    output =
-      capture_io(fn ->
-        run([])
-      end)
+    capture_io(fn ->
+      output =
+        capture_io(:stderr, fn ->
+          run([])
+        end)
 
-    assert output =~ "The task was unable to add some configuration to your application.ex"
-    assert output =~ "You should manually add the following code to your application.ex"
+      assert output =~ "The task was unable to add some configuration to your application.ex"
+      assert output =~ "You should manually add the following code to your application.ex"
+    end)
   end
 
   describe "inject_js_import/0" do
-    test "injects js import magic_auth when js file exists" do
-      js_file_path = "assets/js/app.js"
-      File.mkdir_p!("assets/js")
-
-      File.write!(js_file_path, """
-      import {Socket} from "phoenix"
-      import {LiveSocket} from "phoenix_live_view"
-      """)
-
+    test "injects js import magic_auth when js file exists", %{js_file_path: js_file_path} do
       capture_io(fn ->
         run([])
       end)
@@ -329,7 +343,9 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       initial_content = File.read!(js_file_path)
 
       capture_io(fn ->
-        run([])
+        capture_io(:stderr, fn ->
+          run([])
+        end)
       end)
 
       final_content = File.read!(js_file_path)
@@ -345,15 +361,17 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       console.log("Hello World");
       """)
 
-      output =
-        capture_io(fn ->
-          run([])
-        end)
+      capture_io(fn ->
+        output =
+          capture_io(:stderr, fn ->
+            run([])
+          end)
 
-      content = File.read!(js_file_path)
-      refute content =~ ~s(from "magic_auth")
-      assert output =~ "The task was unable to add some configuration to your app.js"
-      assert output =~ ~s(from "magic_auth")
+        content = File.read!(js_file_path)
+        refute content =~ ~s(from "magic_auth")
+        assert output =~ "The task was unable to add some configuration to your app.js"
+        assert output =~ ~s(from "magic_auth")
+      end)
     end
   end
 
@@ -370,7 +388,9 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       """)
 
       capture_io(fn ->
-        run([])
+        capture_io(:stderr, fn ->
+          run([])
+        end)
       end)
 
       content = File.read!(js_file_path)
@@ -399,18 +419,20 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       initial_content = File.read!(js_file_path)
 
       capture_io(fn ->
-        run([])
+        capture_io(:stderr, fn ->
+          run([])
+        end)
       end)
 
       final_content = File.read!(js_file_path)
       assert initial_content == final_content
     end
 
-    test "displays error message when liveSocket pattern is not found" do
-      js_file_path = "assets/js/app.js"
-      File.mkdir_p!("assets/js")
-
+    test "displays error message when liveSocket pattern is not found", %{js_file_path: js_file_path} do
       File.write!(js_file_path, """
+      import {Socket} from "phoenix"
+      import {LiveSocket} from "phoenix_live_view"
+
       let liveSocket = new LiveSocket("/live", Socket, {
         longPollFallbackMs: 2500,
         params: {_csrf_token: csrfToken},
@@ -418,25 +440,31 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       })
       """)
 
-      output =
-        capture_io(fn ->
-          run([])
-        end)
+      capture_io(fn ->
+        output =
+          capture_io(:stderr, fn ->
+            run([])
+          end)
 
-      content = File.read!(js_file_path)
-      refute content =~ "hooks: {...MagicAuthHooks}"
-      assert output =~ "The task was unable to add some configuration to your app.js"
-      assert output =~ "hooks: {...MyAppHooks, ...MagicAuthHooks}"
+        content = File.read!(js_file_path)
+        refute content =~ "hooks: {...MagicAuthHooks}"
+        assert output =~ "The task was unable to add some configuration to your app.js"
+        assert output =~ "hooks: {...MyAppHooks, ...MagicAuthHooks}"
+      end)
     end
   end
 
-  test "displays error message when unable to find /assets/js/app.js file" do
-    output =
-      capture_io(fn ->
-        run([])
-      end)
+  test "displays error message when unable to find /assets/js/app.js file", %{js_file_path: js_file_path} do
+    File.rm_rf!(js_file_path)
 
-    assert output =~ "The task was unable to add some configuration to your app.js"
-    assert output =~ ~s(import {MagicAuthHooks} from "magic_auth")
+    capture_io(fn ->
+      output =
+        capture_io(:stderr, fn ->
+          run([])
+        end)
+
+      assert output =~ "The task was unable to add some configuration to your app.js"
+      assert output =~ ~s(import {MagicAuthHooks} from "magic_auth")
+    end)
   end
 end

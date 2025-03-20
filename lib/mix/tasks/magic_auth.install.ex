@@ -80,7 +80,6 @@ defmodule Mix.Tasks.MagicAuth.Install do
     install_js()
 
     Mix.shell().info("""
-
     Magic Auth installed successfully!
 
     Don't forget to run the migration:
@@ -136,36 +135,38 @@ defmodule Mix.Tasks.MagicAuth.Install do
   end
 
   defp inject_use_router() do
-    router_file_content = File.read!(router_file())
-
-    unless check_if_use_router_already_installed(router_file_content) do
+    with {:ok, router_file_content} <- File.read(router_file()),
+         :not_injected <- check_if_injected(router_file_content, "use MagicAuth.Router"),
+         true <- String.contains?(router_file_content, "use #{web_module()}, :router\n") do
       changed_router_file_content =
         String.replace(
           router_file_content,
-          ~r/use #{web_module()}, :router/,
+          "use #{web_module()}, :router\n",
           "use #{web_module()}, :router\n  use MagicAuth.Router\n\n  magic_auth()"
         )
 
-      if router_file_content == changed_router_file_content do
-        Mix.shell().info("""
-        The task was unable to add some configuration to your router.ex. You should manually add the following code to your router.ex file to complete the setup:
+      File.write!(router_file(), changed_router_file_content)
+    else
+      :already_injected ->
+        :ok
 
-        defmodule #{web_module()}.Router do
-        use #{web_module()}, :router
-        use MagicAuth.Router
+      _ ->
+        Mix.shell().info(
+          IO.ANSI.yellow() <>
+            """
+            warning: The task was unable to add some configuration to your router.ex. You should manually add the following code to your router.ex file to complete the setup:
 
-        magic_auth()
-        # ...
-        end
-        """)
-      else
-        File.write!(router_file(), changed_router_file_content)
-      end
+              defmodule #{web_module()}.Router do
+              use #{web_module()}, :router
+              use MagicAuth.Router
+
+              magic_auth()
+              # ...
+              end
+            """ <>
+            IO.ANSI.reset()
+        )
     end
-  end
-
-  defp check_if_use_router_already_installed(router_file_content) do
-    String.contains?(router_file_content, "use MagicAuth.Router")
   end
 
   defp inject_fetch_magic_auth_session_plug() do
@@ -185,43 +186,53 @@ defmodule Mix.Tasks.MagicAuth.Install do
         :ok
 
       _ ->
-        Mix.shell().info("""
-        The task was unable to add some configuration to your router.ex. You should manually add the following code to your router.ex file to complete the setup:
+        Mix.shell().info(
+          IO.ANSI.yellow() <>
+            """
+            warning: The task was unable to add some configuration to your router.ex. You should manually add the following code to your router.ex file to complete the setup:
 
-        pipeline :browser do
-          # add this after the other plugs
-          plug :fetch_magic_auth_session
-        end
-        """)
+              pipeline :browser do
+                # add this after the other plugs
+                plug :fetch_magic_auth_session
+              end
+            """ <>
+            IO.ANSI.reset()
+        )
     end
   end
 
   defp install_token_buckets() do
     Mix.shell().info(IO.ANSI.cyan() <> "* injecting " <> IO.ANSI.reset() <> "#{application_file()}")
-    application_file_content = File.read!(application_file())
 
-    unless token_bucket_installed?(application_file_content) do
-      case Regex.run(~r/children = \[.*\s\s\s\s\]\n/Us, application_file_content, return: :index) do
-        [{index, length}] ->
-          {prelude, postlude} = String.split_at(application_file_content, index + length)
+    with {:ok, application_file_content} <- File.read(application_file()),
+         :not_injected <- check_if_injected(application_file_content, "MagicAuth.children"),
+         true <- String.contains?(application_file_content, "Supervisor.start_link(") do
+      changed_application_file_content =
+        String.replace(
+          application_file_content,
+          "Supervisor.start_link(",
+          "children = children ++ MagicAuth.children()\n    Supervisor.start_link("
+        )
 
-          changed_application_file_content =
-            prelude <> "    children = children ++ MagicAuth.children()\n" <> postlude
+      File.write!(
+        application_file(),
+        changed_application_file_content
+      )
+    else
+      :already_injected ->
+        :ok
 
-          File.write!(application_file(), changed_application_file_content)
+      _ ->
+        Mix.shell().info(
+          IO.ANSI.yellow() <>
+            """
+            warning: The task was unable to add some configuration to your application.ex. You should manually add the following code to your application.ex file to complete the setup:
 
-        _not_found ->
-          Mix.shell().info("""
-          The task was unable to add some configuration to your application.ex. You should manually add the following code to your application.ex file to complete the setup:
-
-          children = children ++ MagicAuth.children()
-          """)
-      end
+              children = children ++ MagicAuth.children()
+            """ <>
+            IO.ANSI.reset()
+        )
     end
-  end
-
-  defp token_bucket_installed?(application_file_content) do
-    String.contains?(application_file_content, "MagicAuth.children")
   end
 
   defp install_js() do
@@ -231,18 +242,9 @@ defmodule Mix.Tasks.MagicAuth.Install do
     inject_js_magic_auth_hook()
   end
 
-  defp check_if_injected(js_file_content, content) do
-    if String.contains?(js_file_content, content) do
-      :already_injected
-    else
-      :not_injected
-    end
-  end
-
   defp inject_js_import() do
     with {:ok, js_file_content} <- File.read(js_file()),
-         :not_injected <-
-           check_if_injected(js_file_content, ~s(from "magic_auth")),
+         :not_injected <- check_if_injected(js_file_content, ~s(from "magic_auth")),
          true <- String.contains?(js_file_content, ~s(from "phoenix_live_view")) do
       js_file_content =
         String.replace(
@@ -257,30 +259,28 @@ defmodule Mix.Tasks.MagicAuth.Install do
         :ok
 
       _ ->
-        Mix.shell().info("""
-        The task was unable to add some configuration to your app.js. You should manually add the following code to your app.js file to complete the setup:
+        Mix.shell().info(
+          IO.ANSI.yellow() <>
+            """
+            warning: The task was unable to add some configuration to your app.js. You should manually add the following code to your app.js file to complete the setup:
 
-        import {MagicAuthHooks} from "magic_auth"
-        """)
+              import {MagicAuthHooks} from "magic_auth"
+            """ <>
+            IO.ANSI.reset()
+        )
     end
   end
 
   defp inject_js_magic_auth_hook() do
-    lookup_content = """
-    let liveSocket = new LiveSocket("/live", Socket, {
-      longPollFallbackMs: 2500,
-      params: {_csrf_token: csrfToken}
-    })
-    """
-
     with {:ok, js_file_content} <- File.read(js_file()),
-         :not_injected <- check_if_injected(js_file_content, "hooks: {...MagicAuthHooks}"),
-         true <- String.contains?(js_file_content, lookup_content) do
+         :not_injected <- check_if_injected(js_file_content, "...MagicAuthHooks"),
+         true <- String.contains?(js_file_content, "params: {_csrf_token: csrfToken}\n"),
+         false <- String.contains?(js_file_content, "hooks:") do
       js_file_content =
         String.replace(
           js_file_content,
-          "params: {_csrf_token: csrfToken}",
-          "params: {_csrf_token: csrfToken},\n  hooks: {...MagicAuthHooks}"
+          "params: {_csrf_token: csrfToken}\n",
+          "params: {_csrf_token: csrfToken},\n  hooks: {...MagicAuthHooks}\n"
         )
 
       File.write!(js_file(), js_file_content)
@@ -289,14 +289,26 @@ defmodule Mix.Tasks.MagicAuth.Install do
         :ok
 
       _ ->
-        Mix.shell().info("""
-        The task was unable to add some configuration to your app.js. You should manually add the following code to your app.js file to complete the setup:
+        Mix.shell().info(
+          IO.ANSI.yellow() <>
+            """
+            warning: The task was unable to add some configuration to your app.js. You should manually add the following code to your app.js file to complete the setup:
 
-        let liveSocket = new LiveSocket("/live", Socket, {
-          # add this hooks in line below into your liveSocket configuration
-          hooks: {...MyAppHooks, ...MagicAuthHooks}
-        })
-        """)
+              let liveSocket = new LiveSocket("/live", Socket, {
+                # add this hooks in line below into your liveSocket configuration
+                hooks: {...MyAppHooks, ...MagicAuthHooks}
+              })
+            """ <>
+            IO.ANSI.reset()
+        )
+    end
+  end
+
+  defp check_if_injected(js_file_content, content) do
+    if String.contains?(js_file_content, content) do
+      :already_injected
+    else
+      :not_injected
     end
   end
 end
