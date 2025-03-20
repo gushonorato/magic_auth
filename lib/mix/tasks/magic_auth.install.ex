@@ -280,7 +280,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
         String.replace(
           js_file_content,
           "params: {_csrf_token: csrfToken}",
-          "params: {_csrf_token: csrfToken},\n  hooks: { ...MyAppHooks, ...MagicAuthHooks }"
+          "params: {_csrf_token: csrfToken},\n  hooks: {...MagicAuthHooks}"
         )
 
       File.write!(js_file(), js_file_content)
@@ -294,7 +294,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
 
         let liveSocket = new LiveSocket("/live", Socket, {
           # add this hooks in line below into your liveSocket configuration
-          hooks: {...MagicAuthHooks}
+          hooks: {...MyAppHooks, ...MagicAuthHooks}
         })
         """)
     end

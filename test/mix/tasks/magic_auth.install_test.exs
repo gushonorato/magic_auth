@@ -426,7 +426,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       content = File.read!(js_file_path)
       refute content =~ "hooks: {...MagicAuthHooks}"
       assert output =~ "The task was unable to add some configuration to your app.js"
-      assert output =~ "hooks: {...MagicAuthHooks}"
+      assert output =~ "hooks: {...MyAppHooks, ...MagicAuthHooks}"
     end
   end
 
