@@ -76,7 +76,7 @@ For more details, refer to `MagicAuth.require_authenticated/2` and `MagicAuth.on
 
 ## Creating a log out link
 
-After setting up authentication, you must provide users with a way to log out. MagicAuth provides helper functions to generate the correct path for this action:
+After setting up authentication, you must provide users with a way to log out. Magic Auth provides helper functions to generate the correct path for this action:
 
 ```elixir
 <.link method="delete" href={MyAppWeb.Router.__magic_auth__(:log_out)}>Logout</.link>
