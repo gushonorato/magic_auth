@@ -280,7 +280,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
         String.replace(
           js_file_content,
           "params: {_csrf_token: csrfToken}",
-          "params: {_csrf_token: csrfToken},\n  hooks: {...MagicAuthHooks}"
+          "params: {_csrf_token: csrfToken},\n  hooks: { ...MyAppHooks, ...MagicAuthHooks }"
         )
 
       File.write!(js_file(), js_file_content)
