@@ -105,7 +105,7 @@ defmodule MagicAuth do
     |> Multi.insert(:insert_one_time_passwords, fn _changes ->
       Ecto.Changeset.put_change(changeset, :hashed_password, Bcrypt.hash_pwd_salt(code))
     end)
-    |> MagicAuth.Config.repo_module().transaction()
+    |> MagicAuth.Repo.transaction()
     |> case do
       {:ok, %{insert_one_time_passwords: one_time_password}} ->
         MagicAuth.Config.callback_module().one_time_password_requested(%{code: code, email: one_time_password.email})
@@ -133,7 +133,7 @@ defmodule MagicAuth do
   4. Verifies the provided password matches the stored hash
   """
   def verify_password(email, password) do
-    one_time_password = MagicAuth.Config.repo_module().get_by(OneTimePassword, email: email)
+    one_time_password = MagicAuth.Repo.get_by(OneTimePassword, email: email)
 
     cond do
       is_nil(one_time_password) ->
@@ -145,7 +145,7 @@ defmodule MagicAuth do
         {:error, :code_expired}
 
       Bcrypt.verify_pass(password, one_time_password.hashed_password) ->
-        deleted_one_time_password = MagicAuth.Config.repo_module().delete!(one_time_password)
+        deleted_one_time_password = MagicAuth.Repo.delete!(one_time_password)
         {:ok, deleted_one_time_password}
 
       true ->
@@ -250,7 +250,7 @@ defmodule MagicAuth do
   @doc false
   def create_session!(attrs) do
     session = Session.build_session(attrs)
-    MagicAuth.Config.repo_module().insert!(session)
+    MagicAuth.Repo.insert!(session)
   end
 
   defp setup_authenticated_session(conn, session) do
@@ -310,7 +310,7 @@ defmodule MagicAuth do
   """
   def get_session_by_token(token) do
     {:ok, query} = Session.verify_session_token_query(token, MagicAuth.Config.session_validity_in_days())
-    MagicAuth.Config.repo_module().one(query)
+    MagicAuth.Repo.one(query)
   end
 
   @doc """
@@ -336,7 +336,7 @@ defmodule MagicAuth do
   Deletes all sessions associated with a given token.
   """
   def delete_all_sessions_by_token(token) do
-    MagicAuth.Config.repo_module().delete_all(from s in Session, where: s.token == ^token)
+    MagicAuth.Repo.delete_all(from s in Session, where: s.token == ^token)
     :ok
   end
 
@@ -356,7 +356,7 @@ defmodule MagicAuth do
       {0, nil} # where n is the number of deleted sessions
   """
   def delete_all_sessions_by_email(email) do
-    MagicAuth.Config.repo_module().delete_all(from s in Session, where: s.email == ^email)
+    MagicAuth.Repo.delete_all(from s in Session, where: s.email == ^email)
   end
 
   @doc """
@@ -370,7 +370,8 @@ defmodule MagicAuth do
   - `assigns[:current_session]` will contain the session data
   - `assigns[:current_user]` will contain the user data only if:
     1. A tuple `{:allow, user_id}` was returned from the `log_in_requested/1` callback during authentication
-    2. The user schema is properly configured with `config :magic_auth, user_schema: MyApp.User`. An error
+    2. The user can be retrieved using the configured `get_user` function. This function
+       should be configured with `config :magic_auth, get_user: &MyApp.Accounts.get_user_by_id/1`. An error
        will be raised if the tuple is returned from the callback and the user schema is not configured.
 
   If the callback returned just `:allow` without a user_id, or if the user schema is not configured,
@@ -414,7 +415,7 @@ defmodule MagicAuth do
   end
 
   defp get_user_from_session(%Session{user_id: user_id}) when not is_nil(user_id) do
-    MagicAuth.Config.repo_module().get(MagicAuth.Config.user_schema(), user_id)
+    MagicAuth.Repo.get_user(user_id)
   end
 
   defp get_user_from_session(_session), do: nil

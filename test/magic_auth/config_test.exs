@@ -126,17 +126,17 @@ defmodule MagicAuth.ConfigTest do
     end
   end
 
-  describe "user_schema/0" do
-    test "returns configured user schema" do
+  describe "get_user/1" do
+    test "returns the configured get_user function" do
       config_sandbox(fn ->
-        Application.put_env(:magic_auth, :user_schema, TestApp.User)
-        assert Config.user_schema() == TestApp.User
+        Application.put_env(:magic_auth, :get_user, :lero)
+        assert Config.get_user() == :lero
       end)
     end
 
     test "raises an error when not configured" do
       assert_raise ArgumentError, fn ->
-        Config.user_schema()
+        Config.get_user()
       end
     end
   end

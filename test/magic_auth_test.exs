@@ -399,7 +399,7 @@ defmodule MagicAuthTest do
         user = MagicAuthTest.Repo.insert!(%MagicAuthTest.User{email: email})
         session = MagicAuth.create_session!(%{email: email, user_id: user.id})
 
-        Application.put_env(:magic_auth, :user_schema, MagicAuthTest.User)
+        Application.put_env(:magic_auth, :get_user, fn _id -> user end)
 
         conn =
           conn
@@ -534,7 +534,7 @@ defmodule MagicAuthTest do
       config_sandbox(fn ->
         user = MagicAuthTest.Repo.insert!(%MagicAuthTest.User{id: 1, email: "test@example.com"})
 
-        Application.put_env(:magic_auth, :user_schema, MagicAuthTest.User)
+        Application.put_env(:magic_auth, :get_user, fn _id -> user end)
 
         socket = %Phoenix.LiveView.Socket{}
         session = MagicAuth.create_session!(%{email: "test@example.com", user_id: 1})
