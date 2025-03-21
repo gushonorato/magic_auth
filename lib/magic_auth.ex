@@ -17,7 +17,6 @@ defmodule MagicAuth do
   import Plug.Conn
   import Phoenix.Controller
   alias MagicAuth.TokenBuckets.LoginAttemptTokenBucket
-  alias Ecto.Multi
   alias MagicAuth.{Session, OneTimePassword}
   alias MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket
 
@@ -97,12 +96,12 @@ defmodule MagicAuth do
   defp do_create_one_time_password(changeset) do
     code = OneTimePassword.generate_code()
 
-    Multi.new()
-    |> Multi.delete_all(
+    MagicAuth.Multi.new()
+    |> MagicAuth.Multi.delete_all(
       :delete_one_time_passwords,
       from(s in MagicAuth.OneTimePassword, where: s.email == ^changeset.changes.email)
     )
-    |> Multi.insert(:insert_one_time_passwords, fn _changes ->
+    |> MagicAuth.Multi.insert(:insert_one_time_passwords, fn _changes ->
       Ecto.Changeset.put_change(changeset, :hashed_password, Bcrypt.hash_pwd_salt(code))
     end)
     |> MagicAuth.Repo.transaction()
