@@ -7,6 +7,7 @@ defmodule <%= @repo_module %>.Migrations.CreateMagicAuthOneTimePasswords do
     create table(:magic_auth_sessions) do
       add :email, :citext, null: false
       add :token, :binary, null: false
+      add :user_id, :integer, null: true
 
       timestamps(type: :utc_datetime)
     end

@@ -233,14 +233,12 @@ defmodule MagicAuth do
   defp perform_log_in(conn, email) do
     case MagicAuth.Config.callback_module().log_in_requested(%{email: email}) do
       :allow ->
-        session = create_session!(email)
-        return_to = get_session(conn, :session_return_to)
+        session = create_session!(%{email: email})
+        setup_authenticated_session(conn, session)
 
-        conn
-        |> renew_session()
-        |> put_token_in_session(session.token)
-        |> maybe_write_remember_me_cookie(session.token)
-        |> redirect(to: return_to || MagicAuth.Config.router().__magic_auth__(:signed_in))
+      {:allow, user_id} ->
+        session = create_session!(%{email: email, user_id: user_id})
+        setup_authenticated_session(conn, session)
 
       :deny ->
         conn
@@ -249,9 +247,20 @@ defmodule MagicAuth do
     end
   end
 
-  def create_session!(email) do
-    session = Session.build_session(email)
+  @doc false
+  def create_session!(attrs) do
+    session = Session.build_session(attrs)
     MagicAuth.Config.repo_module().insert!(session)
+  end
+
+  defp setup_authenticated_session(conn, session) do
+    return_to = get_session(conn, :session_return_to)
+
+    conn
+    |> renew_session()
+    |> put_token_in_session(session.token)
+    |> maybe_write_remember_me_cookie(session.token)
+    |> redirect(to: return_to || MagicAuth.Config.router().__magic_auth__(:signed_in))
   end
 
   defp maybe_write_remember_me_cookie(conn, token) do
@@ -351,13 +360,43 @@ defmodule MagicAuth do
   end
 
   @doc """
-  Authenticates the user session by looking into the session
-  and remember me token.
+  Authenticates the user session by looking into the session and remember me token.
+
+  This function is designed to be used as a plug in your Phoenix router's pipeline.
+  It fetches the user's session from either the session storage or the remember me cookie,
+  and assigns the session and user (if available) to the connection.
+
+  When a user is successfully authenticated:
+  - `assigns[:current_session]` will contain the session data
+  - `assigns[:current_user]` will contain the user data only if:
+    1. A tuple `{:allow, user_id}` was returned from the `log_in_requested/1` callback during authentication
+    2. The user schema is properly configured with `config :magic_auth, user_schema: MyApp.User`. An error
+       will be raised if the tuple is returned from the callback and the user schema is not configured.
+
+  If the callback returned just `:allow` without a user_id, or if the user schema is not configured,
+  `current_user` will be nil.
+
+  ## Examples
+
+      # In your router.ex
+      pipeline :browser do
+        plug :accepts, ["html"]
+        plug :fetch_session
+        plug :fetch_live_flash
+        plug :put_root_layout, {MyAppWeb.LayoutView, :root}
+        plug :protect_from_forgery
+        plug :put_secure_browser_headers
+        plug :fetch_magic_auth_session
+      end
   """
   def fetch_magic_auth_session(conn, _opts) do
     {session_token, conn} = ensure_user_session_token(conn)
     session = session_token && get_session_by_token(session_token)
-    assign(conn, :current_session, session)
+    user = get_user_from_session(session)
+
+    conn
+    |> assign(:current_session, session)
+    |> assign(:current_user, user)
   end
 
   defp ensure_user_session_token(conn) do
@@ -373,6 +412,12 @@ defmodule MagicAuth do
       end
     end
   end
+
+  defp get_user_from_session(%Session{user_id: user_id}) when not is_nil(user_id) do
+    MagicAuth.Config.repo_module().get(MagicAuth.Config.user_schema(), user_id)
+  end
+
+  defp get_user_from_session(_session), do: nil
 
   @doc """
   Plug function that verifies if the user is authenticated.
@@ -435,8 +480,10 @@ defmodule MagicAuth do
 
     This function:
     1. Mounts the user session on the socket
-    2. Continues the mount flow if user is authenticated
-    3. Halts and redirects to login page if user is not authenticated
+    2. Assigns the current user to the socket if a tuple `{:allow, user_id}` was returned from the
+      `log_in_requested/1` callback during authentication
+    3. Continues the mount flow if user is authenticated
+    4. Halts and redirects to login page if user is not authenticated
 
   ## Examples of usage
 
@@ -487,10 +534,15 @@ defmodule MagicAuth do
   end
 
   defp mount_magic_auth_session(socket, session) do
-    Phoenix.Component.assign_new(socket, :current_session, fn ->
-      if session_token = session["session_token"] do
-        get_session_by_token(session_token)
-      end
+    socket =
+      Phoenix.Component.assign_new(socket, :current_session, fn ->
+        if session_token = session["session_token"] do
+          get_session_by_token(session_token)
+        end
+      end)
+
+    Phoenix.Component.assign_new(socket, :current_user, fn ->
+      get_user_from_session(socket.assigns.current_session)
     end)
   end
 

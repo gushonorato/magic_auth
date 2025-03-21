@@ -7,7 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0]
 
+### Enhancements
+
   - Making the messages more visible when the task `mix magic_auth.install` fails to inject code into the files
+  - If a tuple `{:allow, user_id}` is returned from the `log_in_requested/1` callback, Magic Auth will store the user `ID` in 
+    `%Session{user_id: user_id}`. The user will then be automatically loaded by `fetch_magic_auth_session/2` and assigned 
+    to `assigns` under the `:current_user` key.
+
+### Breaking changes
+
+  To support automatic user loading feature, a few small changes must be made to your project before updating:
+
+  1. Add `user_id` column on `magic_auth_sessions` table.
+  ```elixir
+  alter table(:magic_auth_sessions) do
+    add :user_id, :integer, null: true
+  end
+  ```
+
+  2. Add your user schema to the Magic Auth configuration on `config/config.exs`:
+  ```elixir
+  config :magic_auth,
+    user_schema: MyApp.User
+  ```
+
+  DONE!
 
 ## [0.1.1] - 2025-01-29
 

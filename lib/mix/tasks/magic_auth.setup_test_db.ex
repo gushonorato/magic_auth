@@ -14,6 +14,18 @@ defmodule Mix.Tasks.MagicAuth.SetupTestDb do
 
       Mix.Tasks.MagicAuth.Install.install_magic_token_migration_file()
 
+      File.write!("priv/repo/migrations/20250321123456_create_users.exs", """
+      defmodule MagicAuthTest.Repo.Migrations.CreateUsers do
+        use Ecto.Migration
+
+        def change do
+          create table(:users) do
+            add :email, :citext, null: false
+          end
+        end
+      end
+      """)
+
       Mix.Task.run("ecto.create", ["--quiet"])
 
       Mix.Task.run("ecto.migrate", [

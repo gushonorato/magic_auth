@@ -34,4 +34,8 @@ defmodule MagicAuth.Config do
   def rate_limit_enabled? do
     Application.get_env(:magic_auth, :enable_rate_limit, true)
   end
+
+  def user_schema do
+    Application.fetch_env!(:magic_auth, :user_schema)
+  end
 end

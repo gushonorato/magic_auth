@@ -286,6 +286,25 @@ defmodule MagicAuthTest do
       assert get_session(conn, :session_token)
     end
 
+    test "redirects to signed_in when log_in_requested returns {:allow, user_id}", %{
+      conn: conn,
+      code: code,
+      email: email
+    } do
+      user_id = 123
+      Mox.expect(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn %{email: ^email} -> {:allow, user_id} end)
+
+      conn = MagicAuth.log_in(conn, email, code)
+
+      assert redirected_to(conn) == "/"
+      assert get_session(conn, :session_token)
+
+      # Verify the session was created with the user_id
+      token = get_session(conn, :session_token)
+      session = MagicAuth.get_session_by_token(token)
+      assert session.user_id == user_id
+    end
+
     test "redirects to log_in when log_in_requested returns :deny", %{conn: conn, code: code, email: email} do
       Mox.expect(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn %{email: ^email} -> :deny end)
       Mox.expect(MagicAuthTestWeb.CallbacksMock, :translate_error, fn :access_denied, _opts -> "Access denied" end)
@@ -331,7 +350,7 @@ defmodule MagicAuthTest do
 
   describe "log_out/1" do
     test "erases session and cookies", %{conn: conn, email: email} do
-      session = MagicAuth.create_session!(email)
+      session = MagicAuth.create_session!(%{email: email})
       session_token = session.token
 
       conn =
@@ -364,7 +383,7 @@ defmodule MagicAuthTest do
 
     test "fetch_magic_auth_session loads session when token is valid", %{conn: conn} do
       email = "test@example.com"
-      session = MagicAuth.create_session!(email)
+      session = MagicAuth.create_session!(%{email: email})
 
       conn =
         conn
@@ -372,6 +391,41 @@ defmodule MagicAuthTest do
         |> MagicAuth.fetch_magic_auth_session([])
 
       assert %Session{email: ^email} = conn.assigns.current_session
+    end
+
+    test "fetch_magic_auth_session loads user when token is valid", %{conn: conn} do
+      config_sandbox(fn ->
+        email = "test@example.com"
+        user = MagicAuthTest.Repo.insert!(%MagicAuthTest.User{email: email})
+        session = MagicAuth.create_session!(%{email: email, user_id: user.id})
+
+        Application.put_env(:magic_auth, :user_schema, MagicAuthTest.User)
+
+        conn =
+          conn
+          |> put_session(:session_token, session.token)
+          |> MagicAuth.fetch_magic_auth_session([])
+
+        assert %Session{email: ^email} = conn.assigns.current_session
+        assert conn.assigns.current_user == user
+      end)
+    end
+
+    test "fetch_magic_auth_session does not load user when user_id of session is nil", %{conn: conn} do
+      email = "test@example.com"
+      session = MagicAuth.create_session!(%{email: email})
+
+      conn =
+        conn
+        |> put_session(:session_token, session.token)
+        |> MagicAuth.fetch_magic_auth_session([])
+
+      assert conn.assigns.current_user == nil
+    end
+
+    test "fetch_magic_auth_session does not load user when token is invalid", %{conn: conn} do
+      conn = MagicAuth.fetch_magic_auth_session(conn, [])
+      assert conn.assigns.current_session == nil
     end
   end
 
@@ -390,7 +444,7 @@ defmodule MagicAuthTest do
 
     test "allows access when authenticated", %{conn: conn} do
       email = "test@example.com"
-      session = MagicAuth.create_session!(email)
+      session = MagicAuth.create_session!(%{email: email})
 
       conn =
         conn
@@ -405,7 +459,7 @@ defmodule MagicAuthTest do
   describe "fetch_magic_auth_session/2" do
     test "loads session from session token when there is no remember_me cookie", %{conn: conn} do
       email = "test@example.com"
-      session = MagicAuth.create_session!(email)
+      session = MagicAuth.create_session!(%{email: email})
 
       conn =
         conn
@@ -469,11 +523,38 @@ defmodule MagicAuthTest do
     test "allows access when authenticated" do
       socket = %Phoenix.LiveView.Socket{}
       email = "test@example.com"
-      session = MagicAuth.create_session!(email)
+      session = MagicAuth.create_session!(%{email: email})
       session_data = %{"session_token" => session.token}
 
       assert {:cont, socket} = MagicAuth.on_mount(:require_authenticated, %{}, session_data, socket)
       assert %Session{email: ^email} = socket.assigns.current_session
+    end
+
+    test "loads user when session has user_id" do
+      config_sandbox(fn ->
+        user = MagicAuthTest.Repo.insert!(%MagicAuthTest.User{id: 1, email: "test@example.com"})
+
+        Application.put_env(:magic_auth, :user_schema, MagicAuthTest.User)
+
+        socket = %Phoenix.LiveView.Socket{}
+        session = MagicAuth.create_session!(%{email: "test@example.com", user_id: 1})
+        session_data = %{"session_token" => session.token}
+
+        assert {:cont, socket} = MagicAuth.on_mount(:require_authenticated, %{}, session_data, socket)
+        assert %Session{email: "test@example.com", user_id: 1} = socket.assigns.current_session
+        assert socket.assigns.current_user == user
+      end)
+    end
+
+    test "current_user is nil when session has no user_id" do
+      socket = %Phoenix.LiveView.Socket{}
+      email = "test@example.com"
+      session = MagicAuth.create_session!(%{email: email})
+      session_data = %{"session_token" => session.token}
+
+      assert {:cont, socket} = MagicAuth.on_mount(:require_authenticated, %{}, session_data, socket)
+      assert %Session{email: ^email, user_id: nil} = socket.assigns.current_session
+      assert socket.assigns.current_user == nil
     end
   end
 
@@ -481,7 +562,7 @@ defmodule MagicAuthTest do
     test "redirects when authenticated" do
       socket = %Phoenix.LiveView.Socket{}
       email = "test@example.com"
-      session = MagicAuth.create_session!(email)
+      session = MagicAuth.create_session!(%{email: email})
       session_data = %{"session_token" => session.token}
 
       assert {:halt, socket} = MagicAuth.on_mount(:redirect_if_authenticated, %{}, session_data, socket)
@@ -500,7 +581,7 @@ defmodule MagicAuthTest do
   describe "delete_all_sessions_by_token/1" do
     test "removes the session", %{conn: conn} do
       email = "test@example.com"
-      session = MagicAuth.create_session!(email)
+      session = MagicAuth.create_session!(%{email: email})
 
       assert :ok = MagicAuth.delete_all_sessions_by_token(session.token)
 
@@ -517,9 +598,9 @@ defmodule MagicAuthTest do
     test "deletes all sessions for a given email" do
       email = "user@example.com"
 
-      session1 = MagicAuth.create_session!(email)
-      session2 = MagicAuth.create_session!(email)
-      other_session = MagicAuth.create_session!("other@example.com")
+      session1 = MagicAuth.create_session!(%{email: email})
+      session2 = MagicAuth.create_session!(%{email: email})
+      other_session = MagicAuth.create_session!(%{email: "other@example.com"})
 
       assert {2, nil} = MagicAuth.delete_all_sessions_by_email(email)
 

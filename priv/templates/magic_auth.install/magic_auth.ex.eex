@@ -302,7 +302,7 @@ defmodule <%= @web_module %>.MagicAuth do
   # def log_in_requested(%{email: email}) do
   #   case Repo.get_by(User, email: email) do
   #     nil -> :deny  # User not found in database
-  #     _user -> :allow  # User exists in database
+  #     user -> {:allow, user.id}  # User exists in database
   #   end
   # end
   # ```
@@ -315,6 +315,12 @@ defmodule <%= @web_module %>.MagicAuth do
   #
   #   * `:allow` - Allow user to access the application
   #   * `:deny` - Deny the log in request
+  #   * `{:allow, user_id}` - Allow user to access the application and store the user_id in the session.
+  #      When this format is used, the user will be automatically loaded from the database and assigned to
+  #      conn.assigns.current_user and socket.assigns.current_user.
+  #
+  # See `MagicAuth.log_in_requested/1` and `MagicAuth.on_mount/4` docs for more information.
+  #
   @impl true
   def log_in_requested(%{email: _email}), do: :allow
 

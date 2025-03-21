@@ -7,12 +7,14 @@ defmodule MagicAuth.Session do
   """
   use Ecto.Schema
   import Ecto.Query
+  import Ecto.Changeset
 
   @rand_size 32
 
   schema "magic_auth_sessions" do
     field :email, :string
     field :token, :binary, redact: true
+    field :user_id, :integer
 
     timestamps(type: :utc_datetime)
   end
@@ -36,9 +38,13 @@ defmodule MagicAuth.Session do
   and devices in the UI and allow users to explicitly expire any
   session they deem invalid.
   """
-  def build_session(email) do
-    token = :crypto.strong_rand_bytes(@rand_size)
-    %__MODULE__{token: token, email: email}
+  def build_session(attrs) do
+    attrs = Map.take(attrs, [:email, :user_id])
+
+    %__MODULE__{}
+    |> cast(attrs, [:email, :user_id])
+    |> put_change(:token, :crypto.strong_rand_bytes(@rand_size))
+    |> apply_changes()
   end
 
   @doc """

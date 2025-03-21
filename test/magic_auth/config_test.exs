@@ -1,4 +1,4 @@
-defmodule ConfigTest do
+defmodule MagicAuth.ConfigTest do
   use ExUnit.Case, async: true
 
   alias MagicAuth.Config
@@ -123,6 +123,21 @@ defmodule ConfigTest do
         Application.put_env(:magic_auth, :enable_rate_limit, true)
         assert MagicAuth.Config.rate_limit_enabled?() == true
       end)
+    end
+  end
+
+  describe "user_schema/0" do
+    test "returns configured user schema" do
+      config_sandbox(fn ->
+        Application.put_env(:magic_auth, :user_schema, TestApp.User)
+        assert Config.user_schema() == TestApp.User
+      end)
+    end
+
+    test "raises an error when not configured" do
+      assert_raise ArgumentError, fn ->
+        Config.user_schema()
+      end
     end
   end
 end
