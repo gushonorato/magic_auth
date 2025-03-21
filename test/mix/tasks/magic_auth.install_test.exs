@@ -233,15 +233,13 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     end
     """)
 
-    capture_io(fn ->
-      output =
-        capture_io(:stderr, fn ->
-          run([])
-        end)
+    output =
+      capture_io(fn ->
+        run([])
+      end)
 
-      assert output =~ "The task was unable to add some configuration to your router.ex"
-      assert output =~ "You should manually add the following code to your router.ex"
-    end)
+    assert output =~ "The task was unable to add some configuration to your router.ex"
+    assert output =~ "You should manually add the following code to your router.ex"
   end
 
   test "installs token buckets configuration", %{application_file_path: application_file_path} do
@@ -309,15 +307,13 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     end
     """)
 
-    capture_io(fn ->
-      output =
-        capture_io(:stderr, fn ->
-          run([])
-        end)
+    output =
+      capture_io(fn ->
+        run([])
+      end)
 
-      assert output =~ "The task was unable to add some configuration to your application.ex"
-      assert output =~ "You should manually add the following code to your application.ex"
-    end)
+    assert output =~ "The task was unable to add some configuration to your application.ex"
+    assert output =~ "You should manually add the following code to your application.ex"
   end
 
   describe "inject_js_import/0" do
@@ -361,17 +357,15 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       console.log("Hello World");
       """)
 
-      capture_io(fn ->
-        output =
-          capture_io(:stderr, fn ->
-            run([])
-          end)
+      output =
+        capture_io(fn ->
+          run([])
+        end)
 
-        content = File.read!(js_file_path)
-        refute content =~ ~s(from "magic_auth")
-        assert output =~ "The task was unable to add some configuration to your app.js"
-        assert output =~ ~s(from "magic_auth")
-      end)
+      content = File.read!(js_file_path)
+      refute content =~ ~s(from "magic_auth")
+      assert output =~ "The task was unable to add some configuration to your app.js"
+      assert output =~ ~s(from "magic_auth")
     end
   end
 
@@ -440,31 +434,27 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       })
       """)
 
-      capture_io(fn ->
-        output =
-          capture_io(:stderr, fn ->
-            run([])
-          end)
+      output =
+        capture_io(fn ->
+          run([])
+        end)
 
-        content = File.read!(js_file_path)
-        refute content =~ "hooks: {...MagicAuthHooks}"
-        assert output =~ "The task was unable to add some configuration to your app.js"
-        assert output =~ "hooks: {...MyAppHooks, ...MagicAuthHooks}"
-      end)
+      content = File.read!(js_file_path)
+      refute content =~ "hooks: {...MagicAuthHooks}"
+      assert output =~ "The task was unable to add some configuration to your app.js"
+      assert output =~ "hooks: {...MyAppHooks, ...MagicAuthHooks}"
     end
   end
 
   test "displays error message when unable to find /assets/js/app.js file", %{js_file_path: js_file_path} do
     File.rm_rf!(js_file_path)
 
-    capture_io(fn ->
-      output =
-        capture_io(:stderr, fn ->
-          run([])
-        end)
+    output =
+      capture_io(fn ->
+        run([])
+      end)
 
-      assert output =~ "The task was unable to add some configuration to your app.js"
-      assert output =~ ~s(import {MagicAuthHooks} from "magic_auth")
-    end)
+    assert output =~ "The task was unable to add some configuration to your app.js"
+    assert output =~ ~s(import {MagicAuthHooks} from "magic_auth")
   end
 end
