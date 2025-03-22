@@ -363,7 +363,28 @@ defmodule MagicAuth do
   """
   def log_out_all(conn, opts \\ []) do
     %{assigns: %{current_user: user, current_session: session}} = conn
+    log_out_all(user, session, opts)
+    cleanup_session_log_out(conn)
+  end
 
+  @doc """
+  Logs out all sessions for a given user and session.
+
+  This is a lower-level function that handles the actual session deletion and socket disconnection
+  logic. It's used by `log_out_all/2` which provides the connection-based interface.
+
+  ## Parameters
+
+    * `user` - The user struct whose sessions should be terminated
+    * `session` - The current session struct
+    * `opts` - Options for controlling the logout behavior:
+      * `:disconnect_self` - Boolean that determines whether to disconnect the current session socket (defaults to `true`)
+
+  ## Returns
+
+    * `:ok` - When the operation completes successfully
+  """
+  def log_out_all(user, session, opts) do
     sessions = MagicAuth.Repo.all(from s in Session, where: s.user_id == ^user.id)
     session_ids = Enum.map(sessions, & &1.id)
     MagicAuth.Repo.delete_all(from s in Session, where: s.id in ^session_ids)
@@ -382,8 +403,6 @@ defmodule MagicAuth do
           :ok
       end
     end)
-
-    cleanup_session_log_out(conn)
   end
 
   @doc """

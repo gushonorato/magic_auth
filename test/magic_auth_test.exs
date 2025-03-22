@@ -603,7 +603,7 @@ defmodule MagicAuthTest do
 
         Application.put_env(:magic_auth, :endpoint, MagicAuthTest.FakeLogoutEndpoint)
 
-        conn = conn |> Plug.Conn.assign(:current_session, session1) |>  Plug.Conn.assign(:current_user, %{id: user_id})
+        conn = conn |> Plug.Conn.assign(:current_session, session1) |> Plug.Conn.assign(:current_user, %{id: user_id})
 
         # Call the function under test
         assert %Plug.Conn{} = MagicAuth.log_out_all(conn)
