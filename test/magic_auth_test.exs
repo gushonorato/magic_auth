@@ -603,7 +603,7 @@ defmodule MagicAuthTest do
 
         Application.put_env(:magic_auth, :endpoint, MagicAuthTest.FakeLogoutEndpoint)
 
-        conn = conn |> Plug.Conn.assign(:current_user, %{id: user_id})
+        conn = conn |> Plug.Conn.assign(:current_session, session1) |>  Plug.Conn.assign(:current_user, %{id: user_id})
 
         # Call the function under test
         assert %Plug.Conn{} = MagicAuth.log_out_all(conn)
@@ -621,6 +621,38 @@ defmodule MagicAuthTest do
         # Verify disconnect messages were not broadcast for the different user
         socket_id3 = MagicAuth.live_socket_id(session3.token)
         refute_received {:broadcast, ^socket_id3, "disconnect", %{}}
+      end)
+    end
+
+    test "does not disconnect current session when disconnect_self is false", %{conn: conn} do
+      config_sandbox(fn ->
+        # Create multiple sessions for the same user
+        user_id = 1
+        session1 = MagicAuth.create_session!(%{email: "test1@example.com", user_id: user_id})
+        session2 = MagicAuth.create_session!(%{email: "test2@example.com", user_id: user_id})
+
+        Application.put_env(:magic_auth, :endpoint, MagicAuthTest.FakeLogoutEndpoint)
+
+        # Setup conn with current user and current session
+        conn =
+          conn
+          |> Plug.Conn.assign(:current_user, %{id: user_id})
+          |> Plug.Conn.assign(:current_session, session1)
+
+        # Call the function under test with disconnect_self: false
+        MagicAuth.log_out_all(conn, disconnect_self: false)
+
+        # Verify sessions are deleted
+        assert is_nil(MagicAuth.get_session_by_token(session1.token))
+        assert is_nil(MagicAuth.get_session_by_token(session2.token))
+
+        # Verify disconnect message was not sent for current session
+        socket_id1 = MagicAuth.live_socket_id(session1.token)
+        refute_received {:broadcast, ^socket_id1, "disconnect", %{}}
+
+        # Verify disconnect message was sent for other session
+        socket_id2 = MagicAuth.live_socket_id(session2.token)
+        assert_received {:broadcast, ^socket_id2, "disconnect", %{}}
       end)
     end
   end

@@ -348,26 +348,39 @@ defmodule MagicAuth do
   It deletes all sessions associated with the user from the database and broadcasts
   a disconnect message to all live views connected with those sessions.
 
-  Excepto para casos especiais, você não irá usar essa função. Se o usuário solicitar o logout de todas as sessões,
-  você deve redirecionar para a página de logout.
+  Except for special cases, you should not use this function directly. If the user requests to log out of all sessions,
+  you should redirect to the logout page.
 
   ## Parameters
 
     * `conn` - The Plug.Conn connection
+    * `opts` - Options for controlling the logout behavior:
+      * `:disconnect_self` - Boolean that determines whether to disconnect the current session socket (defaults to `true`)
 
   ## Returns
 
-
+    * `%Plug.Conn{}` - The updated connection with cleared session data and redirect to root path
   """
-  def log_out_all(conn) do
-    user_id = conn.assigns.current_user.id
+  def log_out_all(conn, opts \\ []) do
+    %{assigns: %{current_user: user, current_session: session}} = conn
 
-    sessions = MagicAuth.Repo.all(from s in Session, where: s.user_id == ^user_id)
+    sessions = MagicAuth.Repo.all(from s in Session, where: s.user_id == ^user.id)
     session_ids = Enum.map(sessions, & &1.id)
     MagicAuth.Repo.delete_all(from s in Session, where: s.id in ^session_ids)
 
-    Enum.each(sessions, fn session ->
-      MagicAuth.Config.endpoint().broadcast(live_socket_id(session.token), "disconnect", %{})
+    disconnect_self? = Keyword.get(opts, :disconnect_self, true)
+
+    Enum.each(sessions, fn s ->
+      cond do
+        session.id != s.id ->
+          MagicAuth.Config.endpoint().broadcast(live_socket_id(s.token), "disconnect", %{})
+
+        s.id == session.id and disconnect_self? ->
+          MagicAuth.Config.endpoint().broadcast(live_socket_id(session.token), "disconnect", %{})
+
+        true ->
+          :ok
+      end
     end)
 
     cleanup_session_log_out(conn)
