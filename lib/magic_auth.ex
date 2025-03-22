@@ -327,6 +327,10 @@ defmodule MagicAuth do
       MagicAuth.Config.endpoint().broadcast(live_socket_id, "disconnect", %{})
     end
 
+    cleanup_session_log_out(conn)
+  end
+
+  defp cleanup_session_log_out(conn) do
     conn
     |> renew_session()
     |> delete_resp_cookie(MagicAuth.Config.remember_me_cookie())
@@ -344,21 +348,20 @@ defmodule MagicAuth do
   It deletes all sessions associated with the user from the database and broadcasts
   a disconnect message to all live views connected with those sessions.
 
+  Excepto para casos especiais, você não irá usar essa função. Se o usuário solicitar o logout de todas as sessões,
+  você deve redirecionar para a página de logout.
+
   ## Parameters
 
-    * `user_id` - The ID of the user whose sessions should be terminated
+    * `conn` - The Plug.Conn connection
 
   ## Returns
 
-    * `:ok` - Always returns `:ok` regardless of whether any sessions were found and deleted
 
-  ## Examples
-
-      iex> user_id = 1
-      iex> MagicAuth.log_out_all(user_id)
-      :ok
   """
-  def log_out_all(user_id) do
+  def log_out_all(conn) do
+    user_id = conn.assigns.current_user.id
+
     sessions = MagicAuth.Repo.all(from s in Session, where: s.user_id == ^user_id)
     session_ids = Enum.map(sessions, & &1.id)
     MagicAuth.Repo.delete_all(from s in Session, where: s.id in ^session_ids)
@@ -367,7 +370,7 @@ defmodule MagicAuth do
       MagicAuth.Config.endpoint().broadcast(live_socket_id(session.token), "disconnect", %{})
     end)
 
-    :ok
+    cleanup_session_log_out(conn)
   end
 
   @doc """

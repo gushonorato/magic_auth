@@ -24,7 +24,6 @@ defmodule MagicAuth.SessionController do
   defp valid_email?(email), do: String.match?(email, OneTimePassword.email_pattern())
   defp valid_code?(code), do: String.length(code) == MagicAuth.Config.one_time_password_length()
 
-  def log_out(conn, _params) do
-    MagicAuth.log_out(conn)
-  end
+  def log_out(conn, _params), do: MagicAuth.log_out(conn)
+  def log_out_all(conn, _params), do: MagicAuth.log_out_all(conn)
 end

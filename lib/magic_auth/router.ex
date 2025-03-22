@@ -103,7 +103,6 @@ defmodule MagicAuth.Router do
   magic_auth("/auth", signed_in: "/dashboard")
   ```
   This will generate a custom sign in path to `/dashboard` instead of the default `/`.
-
   """
   defmacro magic_auth(scope \\ "/sessions", opts \\ []) do
     log_in = Keyword.get(opts, :log_in, "/log_in")
@@ -149,6 +148,8 @@ defmodule MagicAuth.Router do
         pipe_through [:browser, :require_authenticated]
 
         delete log_out, SessionController, :log_out
+        delete log_out <> "/all", SessionController, :log_out_all
+        get log_out <> "/all/get", SessionController, :log_out_all
       end
 
       scope scope, MagicAuth do

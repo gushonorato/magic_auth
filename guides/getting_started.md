@@ -79,8 +79,30 @@ For more details, refer to `MagicAuth.require_authenticated/2` and `MagicAuth.on
 After setting up authentication, you must provide users with a way to log out. Magic Auth provides helper functions to generate the correct path for this action:
 
 ```elixir
-<.link method="delete" href={MyAppWeb.Router.__magic_auth__(:log_out)}>Logout</.link>
+<.link method="delete" href={~p"/sessions/log_out"}>Logout</.link>
 ```
+
+## Logging out from all sessions
+
+Magic Auth allows users to log out from all active sessions across all devices. This is useful for security purposes when a user suspects unauthorized access to their account.
+
+To create a link that logs out from all sessions, use the following code:
+
+```elixir
+<.link method="delete" href={~p"/sessions/log_out/all"}>Logout</.link>
+```
+
+## Logging out from a LiveView
+
+Since it's not possible to redirect to a route that accepts the DELETE method, Magic Auth alternatively creates a route to log out from all sessions using a GET method so it can be used within a LiveView event. For all other cases, you must use the DELETE method for logging out of sessions. Using the GET method to remove sessions indiscriminately, such as in `<.links>`, can cause incorrect behavior of your web application.
+
+```elixir
+def handle_event("save", _params, socket) do 
+  {:noreply, redirect(socket, to: ~p"/sessions/log_out/all/get")}
+end
+```
+
+If you want to log out from all sessions
 
 See all generated routes in [Introspection Functions](/magic_auth/MagicAuth.Router.html#module-introspection-functions) section of the `MagicAuth.Router` documentation.
 

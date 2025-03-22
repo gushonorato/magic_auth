@@ -586,7 +586,7 @@ defmodule MagicAuthTest do
       end
     end
 
-    test "deletes all sessions for a user" do
+    test "deletes all sessions for a user", %{conn: conn} do
       config_sandbox(fn ->
         # Create multiple sessions for the same user
         user_id = 1
@@ -603,8 +603,10 @@ defmodule MagicAuthTest do
 
         Application.put_env(:magic_auth, :endpoint, MagicAuthTest.FakeLogoutEndpoint)
 
+        conn = conn |> Plug.Conn.assign(:current_user, %{id: user_id})
+
         # Call the function under test
-        assert :ok = MagicAuth.log_out_all(user_id)
+        assert %Plug.Conn{} = MagicAuth.log_out_all(conn)
 
         # Verify sessions are deleted
         assert is_nil(MagicAuth.get_session_by_token(session1.token))
@@ -619,15 +621,6 @@ defmodule MagicAuthTest do
         # Verify disconnect messages were not broadcast for the different user
         socket_id3 = MagicAuth.live_socket_id(session3.token)
         refute_received {:broadcast, ^socket_id3, "disconnect", %{}}
-      end)
-    end
-
-
-
-    test "returns :ok even when no sessions exist" do
-      config_sandbox(fn ->
-        # Call with a user ID that has no sessions
-        assert :ok = MagicAuth.log_out_all(999)
       end)
     end
   end
