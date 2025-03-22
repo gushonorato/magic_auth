@@ -301,8 +301,10 @@ defmodule MagicAuth do
   defp put_token_in_session(conn, token) do
     conn
     |> put_session(:session_token, token)
-    |> put_session(:live_socket_id, "magic_auth_sessions:#{Base.url_encode64(token)}")
+    |> put_session(:live_socket_id, live_socket_id(token))
   end
+
+  def live_socket_id(token), do: "magic_auth_sessions:#{Base.url_encode64(token)}"
 
   @doc """
   Gets the session with the given token.
@@ -331,31 +333,41 @@ defmodule MagicAuth do
     |> redirect(to: "/")
   end
 
-  @doc """
-  Deletes all sessions associated with a given token.
-  """
-  def delete_all_sessions_by_token(token) do
+  defp delete_all_sessions_by_token(token) do
     MagicAuth.Repo.delete_all(from s in Session, where: s.token == ^token)
     :ok
   end
 
   @doc """
-  Deletes all sessions associated with a given email.
+  Logs out all sessions for a given user.
 
-  This function should be called when a user is deleted or has their email changed,
-  to ensure that all their active sessions are terminated.
+  It deletes all sessions associated with the user from the database and broadcasts
+  a disconnect message to all live views connected with those sessions.
 
   ## Parameters
 
-    * `email` - The email of the user whose sessions should be deleted
+    * `user_id` - The ID of the user whose sessions should be terminated
+
+  ## Returns
+
+    * `:ok` - Always returns `:ok` regardless of whether any sessions were found and deleted
 
   ## Examples
 
-      iex> MagicAuth.delete_all_sessions_by_email("user@example.com")
-      {0, nil} # where n is the number of deleted sessions
+      iex> user_id = 1
+      iex> MagicAuth.log_out_all(user_id)
+      :ok
   """
-  def delete_all_sessions_by_email(email) do
-    MagicAuth.Repo.delete_all(from s in Session, where: s.email == ^email)
+  def log_out_all(user_id) do
+    sessions = MagicAuth.Repo.all(from s in Session, where: s.user_id == ^user_id)
+    session_ids = Enum.map(sessions, & &1.id)
+    MagicAuth.Repo.delete_all(from s in Session, where: s.id in ^session_ids)
+
+    Enum.each(sessions, fn session ->
+      MagicAuth.Config.endpoint().broadcast(live_socket_id(session.token), "disconnect", %{})
+    end)
+
+    :ok
   end
 
   @doc """

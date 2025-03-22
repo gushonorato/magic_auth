@@ -578,40 +578,48 @@ defmodule MagicAuthTest do
     end
   end
 
-  describe "delete_all_sessions_by_token/1" do
-    test "removes the session", %{conn: conn} do
-      email = "test@example.com"
-      session = MagicAuth.create_session!(%{email: email})
-
-      assert :ok = MagicAuth.delete_all_sessions_by_token(session.token)
-
-      conn =
-        conn
-        |> put_session(:session_token, session.token)
-        |> MagicAuth.fetch_magic_auth_session([])
-
-      assert conn.assigns.current_session == nil
+  describe "log_out_all/1" do
+    defmodule FakeLogoutEndpoint do
+      def broadcast(socket_id, event, payload) do
+        send(self(), {:broadcast, socket_id, event, payload})
+        :ok
+      end
     end
-  end
 
-  describe "delete_all_sessions_by_email/1" do
-    test "deletes all sessions for a given email" do
-      email = "user@example.com"
+    test "deletes all sessions for a user" do
+      config_sandbox(fn ->
+        # Create multiple sessions for the same user
+        user_id = 1
+        session1 = MagicAuth.create_session!(%{email: "test1@example.com", user_id: user_id})
+        session2 = MagicAuth.create_session!(%{email: "test2@example.com", user_id: user_id})
 
-      session1 = MagicAuth.create_session!(%{email: email})
-      session2 = MagicAuth.create_session!(%{email: email})
-      other_session = MagicAuth.create_session!(%{email: "other@example.com"})
+        # Verify sessions exist
+        assert MagicAuth.get_session_by_token(session1.token)
+        assert MagicAuth.get_session_by_token(session2.token)
 
-      assert {2, nil} = MagicAuth.delete_all_sessions_by_email(email)
+        Application.put_env(:magic_auth, :endpoint, MagicAuthTest.FakeLogoutEndpoint)
 
-      assert is_nil(MagicAuth.get_session_by_token(session1.token))
+        # Call the function under test
+        assert :ok = MagicAuth.log_out_all(user_id)
+
+        # Verify sessions are deleted
+        assert is_nil(MagicAuth.get_session_by_token(session1.token))
       assert is_nil(MagicAuth.get_session_by_token(session2.token))
 
-      assert MagicAuth.get_session_by_token(other_session.token)
+        # Verify disconnect messages were broadcast
+        socket_id1 = MagicAuth.live_socket_id(session1.token)
+        socket_id2 = MagicAuth.live_socket_id(session2.token)
+
+        assert_received {:broadcast, ^socket_id2, "disconnect", %{}}
+        assert_received {:broadcast, ^socket_id1, "disconnect", %{}}
+      end)
     end
 
-    test "returns {0, nil} when no sessions exist for the email" do
-      assert {0, nil} = MagicAuth.delete_all_sessions_by_email("nonexistent@example.com")
+    test "returns :ok even when no sessions exist" do
+      config_sandbox(fn ->
+        # Call with a user ID that has no sessions
+        assert :ok = MagicAuth.log_out_all(999)
+      end)
     end
   end
 end

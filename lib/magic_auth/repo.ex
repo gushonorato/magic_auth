@@ -6,6 +6,11 @@ defmodule MagicAuth.Repo do
     MagicAuth.Config.repo_module().transaction(multi, opts)
   end
 
+  def all(query) do
+    opts = MagicAuth.Config.repo_opts()
+    MagicAuth.Config.repo_module().all(query, opts)
+  end
+
   def get_by(queryable, clauses) do
     opts = MagicAuth.Config.repo_opts()
     MagicAuth.Config.repo_module().get_by(queryable, clauses, opts)

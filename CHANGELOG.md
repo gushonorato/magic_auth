@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Support for multi tenancy with query prefixes and foreign keys.
 
 ### Breaking changes
+  - Removed `MagicAuth.delete_all_sessions_by_token/1`. Use `MagicAuth.log_out/1` instead.
+  - Removed `MagicAuth.delete_all_sessions_by_email/1`. Use `MagicAuth.log_out_all/1` instead.
+
+### How use automatic user loading feature on legacy project
 
   To support the automatic user loading feature, a few small changes must be made to your project before updating (only if you want to use this functionality):
 
