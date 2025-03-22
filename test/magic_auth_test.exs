@@ -593,6 +593,10 @@ defmodule MagicAuthTest do
         session1 = MagicAuth.create_session!(%{email: "test1@example.com", user_id: user_id})
         session2 = MagicAuth.create_session!(%{email: "test2@example.com", user_id: user_id})
 
+        # Create a session for a different user
+        another_user_id = 2
+        session3 = MagicAuth.create_session!(%{email: "test1@example.com", user_id: another_user_id})
+
         # Verify sessions exist
         assert MagicAuth.get_session_by_token(session1.token)
         assert MagicAuth.get_session_by_token(session2.token)
@@ -604,16 +608,21 @@ defmodule MagicAuthTest do
 
         # Verify sessions are deleted
         assert is_nil(MagicAuth.get_session_by_token(session1.token))
-      assert is_nil(MagicAuth.get_session_by_token(session2.token))
+        assert is_nil(MagicAuth.get_session_by_token(session2.token))
 
         # Verify disconnect messages were broadcast
         socket_id1 = MagicAuth.live_socket_id(session1.token)
         socket_id2 = MagicAuth.live_socket_id(session2.token)
-
-        assert_received {:broadcast, ^socket_id2, "disconnect", %{}}
         assert_received {:broadcast, ^socket_id1, "disconnect", %{}}
+        assert_received {:broadcast, ^socket_id2, "disconnect", %{}}
+
+        # Verify disconnect messages were not broadcast for the different user
+        socket_id3 = MagicAuth.live_socket_id(session3.token)
+        refute_received {:broadcast, ^socket_id3, "disconnect", %{}}
       end)
     end
+
+
 
     test "returns :ok even when no sessions exist" do
       config_sandbox(fn ->
