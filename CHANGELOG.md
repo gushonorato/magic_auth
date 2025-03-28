@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `%Session{user_id: user_id}`. The user will then be automatically loaded by `fetch_magic_auth_session/2` and assigned 
     to `assigns` under the `:current_user` key.
   - Support for multi tenancy with query prefixes and foreign keys.
+  - Add default logging of success and error messages in generated email-sending code
 
 ### Breaking changes
   - Removed `MagicAuth.delete_all_sessions_by_token/1`. Use `MagicAuth.log_out/1` instead.

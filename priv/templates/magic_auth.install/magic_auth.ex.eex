@@ -1,5 +1,6 @@
 defmodule <%= @web_module %>.MagicAuth do
   use <%= @web_module %>, :html
+  require Logger
 
   @behaviour MagicAuth.Callbacks
 
@@ -207,6 +208,16 @@ defmodule <%= @web_module %>.MagicAuth do
     |> Swoosh.Email.text_body(text_email_body(code))
     |> Swoosh.Email.html_body(html_email_body(code))
     |> <%= @base %>.Mailer.deliver()
+    |> case do
+      {:ok, _term} ->
+        Logger.debug("One time password e-mail sent to #{email} successfully.")
+
+      {:error, error} ->
+        Logger.error("""
+        One time password e-mail sent to #{email} failed.
+          Error: #{inspect(error)}
+        """)
+    end
   end
 
 
