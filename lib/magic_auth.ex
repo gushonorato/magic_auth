@@ -315,9 +315,9 @@ defmodule MagicAuth do
   end
 
   @doc """
-  Logs the user out.
+  Logs out and redirects to the log in page.
 
-  It clears all session data for safety. See renew_session.
+  It clears all session data for safety.
   """
   def log_out(conn) do
     session_token = get_session(conn, :session_token)
@@ -334,7 +334,7 @@ defmodule MagicAuth do
     conn
     |> renew_session()
     |> delete_resp_cookie(MagicAuth.Config.remember_me_cookie())
-    |> redirect(to: "/")
+    |> redirect(to: MagicAuth.Config.router().__magic_auth__(:log_in))
   end
 
   defp delete_all_sessions_by_token(token) do
@@ -343,7 +343,7 @@ defmodule MagicAuth do
   end
 
   @doc """
-  Logs out all sessions for a given user.
+  Logs out all sessions for a given user and redirects to the log in page.
 
   It deletes all sessions associated with the user from the database and broadcasts
   a disconnect message to all live views connected with those sessions.

@@ -363,7 +363,7 @@ defmodule MagicAuthTest do
       refute get_session(conn, :session_token)
       refute conn.cookies[MagicAuth.Config.remember_me_cookie()]
       assert %{max_age: 0} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == MagicAuth.Config.router().__magic_auth__(:log_in)
       refute MagicAuth.get_session_by_token(session_token)
     end
 
@@ -371,7 +371,7 @@ defmodule MagicAuthTest do
       conn = conn |> fetch_cookies() |> MagicAuth.log_out()
       refute get_session(conn, :session_token)
       assert %{max_age: 0} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
-      assert redirected_to(conn) == "/"
+      assert redirected_to(conn) == MagicAuth.Config.router().__magic_auth__(:log_in)
     end
   end
 

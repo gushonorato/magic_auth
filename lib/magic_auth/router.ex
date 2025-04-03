@@ -61,7 +61,7 @@ defmodule MagicAuth.Router do
       * `:password` - Path for password page. Default: "/password"
       * `:verify` - Path for verify controller. Default: "/verify"
       * `:log_out` - Path for log out controller. Default: "/log_out"
-      * `:signed_in` - Path for signed in page. Default: "/"
+      * `:signed_in` - Path to redirect user after a succesful login if no specific page is requested. Default: "/"
 
   ## Default configuration
 
