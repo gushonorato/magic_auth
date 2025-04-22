@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     to `assigns` under the `:current_user` key.
   - Support for multi tenancy with query prefixes and foreign keys.
   - Add default logging of success and error messages in generated email-sending code
+  - Added test helpers to simplify testing. Refer to the [Testing Guide](guides/testing.md) for further details.
 
 ### Breaking changes
   - Removed `MagicAuth.delete_all_sessions_by_token()`. Use `MagicAuth.log_out()` instead.

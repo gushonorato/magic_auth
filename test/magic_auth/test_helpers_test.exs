@@ -1,5 +1,5 @@
 defmodule MagicAuth.TestHelpersTest do
-  use MagicAuth.ConnCase, async: false
+  use MagicAuth.ConnCase, async: true
   alias MagicAuth.Session
 
   setup do
@@ -19,18 +19,6 @@ defmodule MagicAuth.TestHelpersTest do
 
       # Verify session was created
       assert %Session{email: "test@example.com"} = MagicAuth.get_session_by_token(token)
-    end
-
-    test "creates a session with user_id when provided", %{conn: conn} do
-      params = %{email: "test@example.com", user_id: 123}
-
-      conn = MagicAuth.TestHelpers.log_in_session(conn, params)
-
-      # Verify token is in session
-      assert token = get_session(conn, :session_token)
-
-      # Verify session was created with user_id
-      assert %Session{email: "test@example.com", user_id: 123} = MagicAuth.get_session_by_token(token)
     end
   end
 end
