@@ -1,7 +1,7 @@
 defmodule MagicAuth.MixProject do
   use Mix.Project
 
-  @version "0.1.1"
+  @version "0.2.0"
   @scm_url "https://github.com/gushonorato/magic_auth"
 
   def project do
@@ -54,6 +54,7 @@ defmodule MagicAuth.MixProject do
         "guides/log_out_user_or_session.md",
         "guides/customization.md",
         "guides/multi_tenancy.md",
+        "guides/testing.md",
         "CHANGELOG.md",
         "LICENSE.md"
       ]
@@ -65,7 +66,7 @@ defmodule MagicAuth.MixProject do
       maintainers: ["Gustavo Honorato"],
       licenses: ["MIT"],
       links: %{"GitHub" => @scm_url},
-      files: ~w(assets/js lib priv CHANGELOG.md LICENSE.md mix.exs package.json README.md .formatter.exs)
+      files: ~w(lib priv CHANGELOG.md LICENSE.md mix.exs package.json README.md .formatter.exs)
     ]
   end
 end
