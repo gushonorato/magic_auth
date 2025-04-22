@@ -19,3 +19,11 @@ defmodule MyApp.MyModuleTest do
   end
 end
 ```
+
+Remember to disable rate limiting in your test environment to prevent test failures.
+
+```
+# config/test.exs
+config :magic_auth,
+  enable_rate_limit: false
+```
