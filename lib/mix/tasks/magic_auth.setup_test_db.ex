@@ -12,9 +12,9 @@ defmodule Mix.Tasks.MagicAuth.SetupTestDb do
 
       Mix.Tasks.Ecto.Drop.run(["--quiet"])
 
-      Mix.Tasks.MagicAuth.Install.install_magic_token_migration_file()
+      Mix.Tasks.MagicAuth.Install.install_magic_auth_migration_file()
 
-      File.write!("priv/repo/migrations/20250321123456_create_users.exs", """
+      File.write!("priv/repo/migrations/20250422184850_create_users.exs", """
       defmodule MagicAuthTest.Repo.Migrations.CreateUsers do
         use Ecto.Migration
 

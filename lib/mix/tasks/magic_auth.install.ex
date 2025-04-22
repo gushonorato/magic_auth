@@ -59,7 +59,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
   defp remember_me_cookie, do: "_#{Mix.Phoenix.context_app()}_remember_me"
 
   defp migration_file() do
-    file = "#{generate_migration_timestamp()}_create_magic_auth_tables.exs"
+    file = "20250422184441_create_magic_auth_tables.exs"
     Mix.Phoenix.context_app_path(Mix.Phoenix.context_app(), Path.join(["priv", repo_path(), "migrations", file]))
   end
 
@@ -73,7 +73,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
 
   def run(_args) do
     inject_config()
-    install_magic_token_migration_file()
+    install_magic_auth_migration_file()
     install_magic_auth_callbacks()
     inject_router()
     install_token_buckets()
@@ -108,15 +108,10 @@ defmodule Mix.Tasks.MagicAuth.Install do
     end
   end
 
-  def install_magic_token_migration_file() do
-    copy_template("#{@template_dir}/create_magic_auth_tables.exs.eex", migration_file(), repo_module: repo_module())
-  end
-
-  defp generate_migration_timestamp do
-    NaiveDateTime.utc_now()
-    |> NaiveDateTime.truncate(:second)
-    |> NaiveDateTime.to_string()
-    |> String.replace(["-", ":", " "], "")
+  def install_magic_auth_migration_file() do
+    copy_template("#{@template_dir}/20250422184441_create_magic_auth_tables.exs.eex", migration_file(),
+      repo_module: repo_module()
+    )
   end
 
   defp install_magic_auth_callbacks() do
