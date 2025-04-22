@@ -17,8 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Add default logging of success and error messages in generated email-sending code
 
 ### Breaking changes
-  - Removed `MagicAuth.delete_all_sessions_by_token/1`. Use `MagicAuth.log_out/1` instead.
-  - Removed `MagicAuth.delete_all_sessions_by_email/1`. Use `MagicAuth.log_out_all/1` instead.
+  - Removed `MagicAuth.delete_all_sessions_by_token()`. Use `MagicAuth.log_out()` instead.
+  - Removed `MagicAuth.delete_all_sessions_by_email()`. Use `MagicAuth.log_out_all()` instead.
   - Magic Auth now redirects to the configured log in page instead of `/` after log out.
 
 ### How use automatic user loading feature on legacy project
