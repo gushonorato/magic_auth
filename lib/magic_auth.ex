@@ -298,7 +298,8 @@ defmodule MagicAuth do
     |> clear_session()
   end
 
-  defp put_token_in_session(conn, token) do
+  @doc false
+  def put_token_in_session(conn, token) do
     conn
     |> put_session(:session_token, token)
     |> put_session(:live_socket_id, live_socket_id(token))
