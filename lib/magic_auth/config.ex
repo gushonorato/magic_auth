@@ -45,51 +45,107 @@ defmodule MagicAuth.Config do
     enable_rate_limit: true,
     repo_opts: fn -> [magic_auth: true] end
   ```
+
+  ## Process-Based Configuration
+
+  This module also supports process-based configuration via ProcessTree.
+  When a config map is stored in the process dictionary with key `:magic_auth_config`,
+  it will be used instead of the Application configuration. This allows for
+  per-request or per-context configuration.
+
+  For LiveView compatibility, use the same function in both a plug and an on_mount callback:
+
+  ```elixir
+  defmodule MyApp.MagicAuthConfigPlug do
+    def call(conn, _opts) do
+      set_magic_auth_config()
+      conn
+    end
+
+    def set_magic_auth_config do
+      Process.put(:magic_auth_config, %{one_time_password_length: 6})
+    end
+
+    def on_mount(:set_magic_auth_config, _params, _session, socket) do
+      set_magic_auth_config()
+      {:cont, socket}
+    end
+  end
+  ```
   """
 
-  def one_time_password_length, do: Application.get_env(:magic_auth, :one_time_password_length, 6)
-  def one_time_password_expiration, do: Application.get_env(:magic_auth, :one_time_password_expiration, 10)
+  def one_time_password_length do
+    case get_config_value(:one_time_password_length) do
+      nil -> Application.get_env(:magic_auth, :one_time_password_length, 6)
+      value -> value
+    end
+  end
+
+  def one_time_password_expiration do
+    case get_config_value(:one_time_password_expiration) do
+      nil -> Application.get_env(:magic_auth, :one_time_password_expiration, 10)
+      value -> value
+    end
+  end
 
   def repo_module do
-    Application.fetch_env!(:magic_auth, :repo)
+    get_config_value(:repo) || Application.fetch_env!(:magic_auth, :repo)
   end
 
   def repo_opts do
-    case Application.get_env(:magic_auth, :repo_opts, magic_auth: true) do
+    case get_config_value(:repo_opts) || Application.get_env(:magic_auth, :repo_opts, magic_auth: true) do
       opts when is_list(opts) -> opts
       opts when is_function(opts) -> opts.()
     end
   end
 
   def callback_module do
-    Application.fetch_env!(:magic_auth, :callbacks)
+    get_config_value(:callbacks) || Application.fetch_env!(:magic_auth, :callbacks)
   end
 
   def router() do
-    Application.fetch_env!(:magic_auth, :router)
+    get_config_value(:router) || Application.fetch_env!(:magic_auth, :router)
   end
 
   def remember_me do
-    Application.get_env(:magic_auth, :remember_me, true)
+    case get_config_value(:remember_me) do
+      nil -> Application.get_env(:magic_auth, :remember_me, true)
+      value -> value
+    end
   end
 
   def remember_me_cookie do
-    Application.fetch_env!(:magic_auth, :remember_me_cookie)
+    get_config_value(:remember_me_cookie) || Application.fetch_env!(:magic_auth, :remember_me_cookie)
   end
 
   def session_validity_in_days do
-    Application.get_env(:magic_auth, :session_validity_in_days, 60)
+    case get_config_value(:session_validity_in_days) do
+      nil -> Application.get_env(:magic_auth, :session_validity_in_days, 60)
+      value -> value
+    end
   end
 
   def endpoint() do
-    Application.fetch_env!(:magic_auth, :endpoint)
+    get_config_value(:endpoint) || Application.fetch_env!(:magic_auth, :endpoint)
   end
 
   def rate_limit_enabled? do
-    Application.get_env(:magic_auth, :enable_rate_limit, true)
+    case get_config_value(:enable_rate_limit) do
+      nil -> Application.get_env(:magic_auth, :enable_rate_limit, true)
+      value -> value
+    end
   end
 
   def get_user() do
-    Application.fetch_env!(:magic_auth, :get_user)
+    get_config_value(:get_user) || Application.fetch_env!(:magic_auth, :get_user)
+  end
+
+  # Private helper functions
+
+  defp get_config_value(key) do
+    case ProcessTree.get(:magic_auth_config) do
+      config when is_map(config) -> Map.get(config, key)
+      _ -> nil
+    end
   end
 end

@@ -1,7 +1,7 @@
 defmodule MagicAuth.SessionController do
   @moduledoc false
 
-  use Phoenix.Controller
+  use Phoenix.Controller, formats: [:html, :json]
   import Plug.Conn
 
   alias MagicAuth.OneTimePassword

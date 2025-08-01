@@ -32,14 +32,17 @@ defmodule MagicAuth.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:bcrypt_elixir, "~> 3.1"},
+      {:ecto, "~> 3.10"},
       {:phoenix_live_view, "~> 1.0"},
       {:phoenix, "~> 1.7"},
-      {:ecto, "~> 3.10"},
-      {:ecto_sql, "~> 3.10", only: [:dev, :test]},
       {:postgrex, ">= 0.0.0"},
-      {:mix_test_watch, "~> 1.2", only: [:dev], runtime: false},
-      {:bcrypt_elixir, "~> 3.1"},
+      {:process_tree, "~> 0.2"},
+
+      ## Test / dev
+      {:ecto_sql, "~> 3.10", only: [:dev, :test]},
       {:mox, "~> 1.0", only: :test},
+      {:mix_test_watch, "~> 1.2", only: [:dev], runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
   end
@@ -54,6 +57,7 @@ defmodule MagicAuth.MixProject do
         "guides/log_out_user_or_session.md",
         "guides/customization.md",
         "guides/multi_tenancy.md",
+        "guides/per_request_configuration.md",
         "guides/testing.md",
         "CHANGELOG.md",
         "LICENSE.md"

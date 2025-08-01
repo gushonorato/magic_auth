@@ -56,12 +56,15 @@ defmodule MagicAuth.Router do
   ## Parameters
 
     * `scope` - Base path for authentication routes. Default: "/sessions"
-    * `opts` - List of options to customize paths:
+    * `opts` - List of options to customize paths and pipelines:
       * `:log_in` - Path for login page. Default: "/log_in"
       * `:password` - Path for password page. Default: "/password"
       * `:verify` - Path for verify controller. Default: "/verify"
       * `:log_out` - Path for log out controller. Default: "/log_out"
       * `:signed_in` - Path to redirect user after a succesful login if no specific page is requested. Default: "/"
+      * `:authenticated_pipeline` - Pipeline for authenticated routes. Default: `[:browser, :require_authenticated]`
+      * `:unauthenticated_pipeline` - Pipeline for unauthenticated routes. Default: `[:browser, :redirect_if_authenticated]`
+      * `:on_mount` - List of on_mount tuples for LiveView. Default: `[{MagicAuth, :redirect_if_authenticated}]`
 
   ## Default configuration
 
@@ -77,7 +80,7 @@ defmodule MagicAuth.Router do
 
   ## Custom configuration
 
-  ```
+  ```elixir
   magic_auth("/auth", log_in: "/entrar", password: "/senha", verify: "/verificar", log_out: "/sair")
   ```
 
@@ -87,6 +90,17 @@ defmodule MagicAuth.Router do
   - /auth/verificar
   - /auth/sair
 
+  ## Custom pipelines and on_mount
+
+  ```elixir
+  magic_auth("/sessions",
+    authenticated_pipeline: [:browser, :admin_auth],
+    unauthenticated_pipeline: [:browser, :admin_config, :redirect_if_authenticated],
+    on_mount: [{MyApp.AdminConfigPlug, :restore_config}, {MagicAuth, :redirect_if_authenticated}]
+  )
+  ```
+
+  This allows you to include custom plugs in the authentication flow and custom on_mount callbacks for LiveView configuration.
 
   ## Customizing the default sign in path
 
@@ -99,7 +113,7 @@ defmodule MagicAuth.Router do
   log in.
 
   Example:
-  ```
+  ```elixir
   magic_auth("/auth", signed_in: "/dashboard")
   ```
   This will generate a custom sign in path to `/dashboard` instead of the default `/`.
@@ -110,6 +124,9 @@ defmodule MagicAuth.Router do
     verify = Keyword.get(opts, :verify, "/verify")
     log_out = Keyword.get(opts, :log_out, "/log_out")
     signed_in = Keyword.get(opts, :signed_in, "/")
+    authenticated_pipeline = Keyword.get(opts, :authenticated_pipeline, [:browser, :require_authenticated])
+    unauthenticated_pipeline = Keyword.get(opts, :unauthenticated_pipeline, [:browser, :redirect_if_authenticated])
+    on_mount = Keyword.get(opts, :on_mount, [{MagicAuth, :redirect_if_authenticated}])
 
     quote bind_quoted: [
             scope: scope,
@@ -117,7 +134,10 @@ defmodule MagicAuth.Router do
             password: password,
             verify: verify,
             log_out: log_out,
-            signed_in: signed_in
+            signed_in: signed_in,
+            authenticated_pipeline: authenticated_pipeline,
+            unauthenticated_pipeline: unauthenticated_pipeline,
+            on_mount: on_mount
           ] do
       def __magic_auth__(:scope), do: unquote(scope)
 
@@ -145,7 +165,7 @@ defmodule MagicAuth.Router do
       defp concat_query(path, query), do: path <> "?" <> URI.encode_query(query)
 
       scope scope, MagicAuth do
-        pipe_through [:browser, :require_authenticated]
+        pipe_through authenticated_pipeline
 
         delete log_out, SessionController, :log_out
         delete log_out <> "/all", SessionController, :log_out_all
@@ -153,10 +173,10 @@ defmodule MagicAuth.Router do
       end
 
       scope scope, MagicAuth do
-        pipe_through [:browser, :redirect_if_authenticated]
+        pipe_through unauthenticated_pipeline
 
         live_session :redirect_if_authenticated,
-          on_mount: [{MagicAuth, :redirect_if_authenticated}] do
+          on_mount: on_mount do
           live log_in, LoginLive
           live password, PasswordLive
         end

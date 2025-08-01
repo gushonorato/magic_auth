@@ -17,4 +17,7 @@ if config_env() == :test do
     secret_key_base: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
   config :logger, level: :warning
+
+  # Remove the complexity from the password hashing algorithm
+  config :bcrypt_elixir, :log_rounds, 1
 end
