@@ -17,8 +17,7 @@ defmodule MagicAuth do
   import Plug.Conn
   import Phoenix.Controller
   alias MagicAuth.TokenBuckets.LoginAttemptTokenBucket
-  alias MagicAuth.{Session, OneTimePassword}
-  alias MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket
+  alias MagicAuth.{Session, OneTimePassword, RateLimit}
 
   @doc """
   Creates and sends a one-time password for a given email.
@@ -32,9 +31,8 @@ defmodule MagicAuth do
   to the configured callback module `one_time_password_requested/1` which should handle
   sending it to the user via email.
 
-  One-time password generation is rate limited using a token bucket system that allows a maximum of
-  1 generation request per minute for each email address. This prevents abuse of the email delivery
-  service.
+  One-time password generation is rate limited to a maximum of 1 generation request per minute
+  for each email address (case insensitive). This prevents abuse of the email delivery service.
 
   ## Parameters
 
@@ -45,7 +43,7 @@ defmodule MagicAuth do
     * `{:ok, code, one_time_password}` - Returns the created one_time_password on success
     * `{:error, changeset}` - Returns the changeset with errors if validation fails
     * `{:error, failed_value}` - Returns the failed value if the transaction fails
-    * `{:error, :rate_limited, countdown}` - Returns the countdown if the rate limit is exceeded
+    * `{:error, :rate_limited, countdown}` - Returns the countdown (in seconds) if the rate limit is exceeded
 
   ## Examples
 
@@ -69,27 +67,15 @@ defmodule MagicAuth do
      which should handle sending the password to the user via email
   """
   def create_one_time_password(attrs) do
-    changeset = MagicAuth.OneTimePassword.changeset(%MagicAuth.OneTimePassword{}, attrs)
-
-    cond do
-      changeset.valid? && MagicAuth.Config.rate_limit_enabled?() ->
-        maybe_create_one_time_password(changeset)
-
-      changeset.valid? && not MagicAuth.Config.rate_limit_enabled?() ->
-        do_create_one_time_password(changeset)
-
-      not changeset.valid? ->
-        {:error, changeset}
+    case MagicAuth.OneTimePassword.changeset(%MagicAuth.OneTimePassword{}, attrs) do
+      %{valid?: true} = changeset -> maybe_create_one_time_password(changeset)
+      changeset -> {:error, changeset}
     end
   end
 
   defp maybe_create_one_time_password(changeset) do
-    case OneTimePasswordRequestTokenBucket.take(changeset.changes.email) do
-      {:ok, _count} ->
-        do_create_one_time_password(changeset)
-
-      {:error, :rate_limited} ->
-        {:error, :rate_limited, OneTimePasswordRequestTokenBucket.get_countdown()}
+    with :ok <- RateLimit.check_one_time_password_request(changeset.changes.email) do
+      do_create_one_time_password(changeset)
     end
   end
 
@@ -597,8 +583,8 @@ defmodule MagicAuth do
   @doc """
   Returns a list of child processes that should be supervised.
 
-  Includes token buckets needed for rate limiting:
-  - OneTimePasswordRequestTokenBucket: Limits one-time password requests
+  Includes the processes needed for rate limiting:
+  - RateLimit: Limits one-time password requests
   - LoginAttemptTokenBucket: Limits login attempts
 
   ## Example
@@ -611,7 +597,7 @@ defmodule MagicAuth do
 
   def children do
     [
-      MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket,
+      MagicAuth.RateLimit,
       MagicAuth.TokenBuckets.LoginAttemptTokenBucket
     ]
   end

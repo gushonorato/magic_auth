@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+  - Fixed a bypass of the one-time password request rate limit. Changing the case of the email (e.g. `User@example.com`)
+    gave a fresh limit for the same address, allowing an attacker to flood the user's inbox.
+
+### Enhancements
+
+  - One-time password requests are now rate limited with [Hammer](https://hex.pm/packages/hammer). Each email has its
+    own time window, and the countdown shown on the verification page refers to the email being verified.
+
 ## [0.2.0]
 
 ### Enhancements

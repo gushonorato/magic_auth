@@ -39,6 +39,7 @@ defmodule MagicAuth.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:mix_test_watch, "~> 1.2", only: [:dev], runtime: false},
       {:bcrypt_elixir, "~> 3.1"},
+      {:hammer, "~> 7.5"},
       {:mox, "~> 1.0", only: :test},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]

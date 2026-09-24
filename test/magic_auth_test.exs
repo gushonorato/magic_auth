@@ -93,15 +93,30 @@ defmodule MagicAuthTest do
 
     test "returns error when rate limit is reached" do
       config_sandbox(fn ->
-        start_supervised!(MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket)
+        start_supervised!(MagicAuth.RateLimit)
         Application.put_env(:magic_auth, :enable_rate_limit, true)
 
         email = "user@example.com"
 
         assert {:ok, _code, _token} = MagicAuth.create_one_time_password(%{"email" => email})
-        assert {:error, :rate_limited, _countdown} = MagicAuth.create_one_time_password(%{"email" => email})
+        assert {:error, :rate_limited, countdown} = MagicAuth.create_one_time_password(%{"email" => email})
+        assert countdown in 1..60
 
-        stop_supervised!(MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket)
+        stop_supervised!(MagicAuth.RateLimit)
+      end)
+    end
+
+    test "rate limit is not bypassed by changing the email case" do
+      config_sandbox(fn ->
+        start_supervised!(MagicAuth.RateLimit)
+        Application.put_env(:magic_auth, :enable_rate_limit, true)
+
+        assert {:ok, _code, _token} = MagicAuth.create_one_time_password(%{"email" => "user@example.com"})
+
+        assert {:error, :rate_limited, _countdown} =
+                 MagicAuth.create_one_time_password(%{"email" => "USER@example.com"})
+
+        stop_supervised!(MagicAuth.RateLimit)
       end)
     end
   end

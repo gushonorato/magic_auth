@@ -2,21 +2,14 @@ defmodule MagicAuth.PasswordLive do
   @moduledoc false
 
   use Phoenix.LiveView
-  alias MagicAuth.OneTimePassword
-  alias MagicAuth.TokenBuckets.OneTimePasswordRequestTokenBucket
+  alias MagicAuth.{OneTimePassword, RateLimit}
 
   def mount(_params, _one_time_password, socket) do
     if connected?(socket) do
-      OneTimePasswordRequestTokenBucket.subscribe()
+      :timer.send_interval(:timer.seconds(1), :update_countdown)
     end
 
-    {:ok,
-     assign(socket,
-       form: to_password_form(nil),
-       email: nil,
-       error: nil,
-       countdown: OneTimePasswordRequestTokenBucket.get_countdown()
-     )}
+    {:ok, assign(socket, form: to_password_form(nil), email: nil, error: nil)}
   end
 
   defp to_password_form(password), do: to_form(%{"password" => password}, as: "auth")
@@ -28,7 +21,7 @@ defmodule MagicAuth.PasswordLive do
         {:noreply, push_navigate(socket, to: redirect_to)}
 
       email ->
-        {:noreply, assign(socket, email: email, error: parse_error(params), rate_limited?: rate_limited?(email))}
+        {:noreply, socket |> assign(email: email, error: parse_error(params)) |> assign_countdown()}
     end
   end
 
@@ -67,13 +60,13 @@ defmodule MagicAuth.PasswordLive do
     case MagicAuth.create_one_time_password(%{"email" => email}) do
       {:ok, _code, _one_time_password} ->
         message = MagicAuth.Config.callback_module().translate_error(:code_resent, [])
-        socket = socket |> assign(rate_limited?: rate_limited?(email)) |> put_flash(:info, message)
+        socket = socket |> assign_countdown() |> put_flash(:info, message)
         {:noreply, socket}
 
       {:error, :rate_limited, countdown} ->
         error_message =
           MagicAuth.Config.callback_module().translate_error(:too_many_one_time_password_requests,
-            countdown: div(countdown, 1000)
+            countdown: countdown
           )
 
         {:noreply, put_flash(socket, :error, error_message)}
@@ -98,12 +91,10 @@ defmodule MagicAuth.PasswordLive do
     """
   end
 
-  def handle_info({:countdown_updated, countdown}, socket) do
-    %{email: email} = socket.assigns
-    {:noreply, assign(socket, countdown: countdown, rate_limited?: rate_limited?(email))}
-  end
+  def handle_info(:update_countdown, socket), do: {:noreply, assign_countdown(socket)}
 
-  def rate_limited?(email) do
-    OneTimePasswordRequestTokenBucket.count(email) <= 0
+  defp assign_countdown(socket) do
+    countdown = RateLimit.one_time_password_request_countdown(socket.assigns.email)
+    assign(socket, countdown: countdown, rate_limited?: countdown > 0)
   end
 end
