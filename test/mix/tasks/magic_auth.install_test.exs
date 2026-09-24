@@ -422,7 +422,70 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       assert initial_content == final_content
     end
 
-    test "displays error message when liveSocket pattern is not found", %{js_file_path: js_file_path} do
+    test "appends MagicAuthHooks to existing hooks", %{js_file_path: js_file_path} do
+      File.write!(js_file_path, """
+      let liveSocket = new LiveSocket("/live", Socket, {
+        longPollFallbackMs: 2500,
+        params: {_csrf_token: csrfToken},
+        hooks: {...colocatedHooks},
+      })
+      """)
+
+      capture_io(fn ->
+        run([])
+      end)
+
+      assert File.read!(js_file_path) =~ """
+             let liveSocket = new LiveSocket("/live", Socket, {
+               longPollFallbackMs: 2500,
+               params: {_csrf_token: csrfToken},
+               hooks: {...colocatedHooks, ...MagicAuthHooks},
+             })
+             """
+    end
+
+    test "appends MagicAuthHooks to existing multiline hooks", %{js_file_path: js_file_path} do
+      File.write!(js_file_path, """
+      let liveSocket = new LiveSocket("/live", Socket, {
+        params: {_csrf_token: csrfToken},
+        hooks: {
+          ...colocatedHooks,
+          MyHook,
+        }
+      })
+      """)
+
+      capture_io(fn ->
+        run([])
+      end)
+
+      assert File.read!(js_file_path) =~ """
+             let liveSocket = new LiveSocket("/live", Socket, {
+               params: {_csrf_token: csrfToken},
+               hooks: {
+                 ...colocatedHooks,
+                 MyHook, ...MagicAuthHooks
+               }
+             })
+             """
+    end
+
+    test "adds MagicAuthHooks to empty hooks", %{js_file_path: js_file_path} do
+      File.write!(js_file_path, """
+      let liveSocket = new LiveSocket("/live", Socket, {
+        params: {_csrf_token: csrfToken},
+        hooks: {}
+      })
+      """)
+
+      capture_io(fn ->
+        run([])
+      end)
+
+      assert File.read!(js_file_path) =~ "hooks: {...MagicAuthHooks}"
+    end
+
+    test "displays error message when hooks is not an object literal", %{js_file_path: js_file_path} do
       File.write!(js_file_path, """
       import {Socket} from "phoenix"
       import {LiveSocket} from "phoenix_live_view"
@@ -430,7 +493,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
       let liveSocket = new LiveSocket("/live", Socket, {
         longPollFallbackMs: 2500,
         params: {_csrf_token: csrfToken},
-        hooks: {...AppHooks}
+        hooks: Hooks
       })
       """)
 
@@ -440,7 +503,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
         end)
 
       content = File.read!(js_file_path)
-      refute content =~ "hooks: {...MagicAuthHooks}"
+      refute content =~ "...MagicAuthHooks"
       assert output =~ "The task was unable to add some configuration to your app.js"
       assert output =~ "hooks: {...MyAppHooks, ...MagicAuthHooks}"
     end

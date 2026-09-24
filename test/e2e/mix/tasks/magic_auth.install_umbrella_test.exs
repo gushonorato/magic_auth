@@ -96,6 +96,6 @@ defmodule E2E.Mix.Tasks.MagicAuth.InstallUmbrellaTest do
       |> File.read!()
 
     assert String.contains?(app_js, ~s(import {MagicAuthHooks} from "magic_auth"))
-    assert String.contains?(app_js, ~s(hooks: {...MagicAuthHooks}))
+    assert app_js =~ ~r"hooks: {[^}]*\.\.\.MagicAuthHooks}"
   end
 end
