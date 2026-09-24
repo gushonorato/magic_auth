@@ -111,10 +111,16 @@ defmodule MagicAuthTest do
         start_supervised!(MagicAuth.RateLimit)
         Application.put_env(:magic_auth, :enable_rate_limit, true)
 
-        assert {:ok, _code, _token} = MagicAuth.create_one_time_password(%{"email" => "user@example.com"})
+        # Only the first request sends an email.
+        expect(MagicAuthTestWeb.CallbacksMock, :one_time_password_requested, 1, fn _params -> :ok end)
+
+        assert {:ok, code, _token} = MagicAuth.create_one_time_password(%{"email" => "user@example.com"})
 
         assert {:error, :rate_limited, _countdown} =
                  MagicAuth.create_one_time_password(%{"email" => "USER@example.com"})
+
+        # The rate limited request doesn't replace the code already sent.
+        assert {:ok, _one_time_password} = MagicAuth.verify_password("user@example.com", code)
 
         stop_supervised!(MagicAuth.RateLimit)
       end)
