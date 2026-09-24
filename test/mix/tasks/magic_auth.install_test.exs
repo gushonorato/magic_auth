@@ -242,7 +242,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert output =~ "You should manually add the following code to your router.ex"
   end
 
-  test "installs token buckets configuration", %{application_file_path: application_file_path} do
+  test "installs MagicAuth children configuration", %{application_file_path: application_file_path} do
     capture_io(fn ->
       run([])
     end)
@@ -265,7 +265,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
            """
   end
 
-  test "does not duplicate token buckets configuration if already present", %{
+  test "does not duplicate MagicAuth children configuration if already present", %{
     application_file_path: application_file_path
   } do
     File.rm!(application_file_path)
@@ -296,7 +296,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert initial_content == final_content
   end
 
-  test "displays error message when unable to inject token buckets configuration", %{
+  test "displays error message when unable to inject MagicAuth children configuration", %{
     application_file_path: application_file_path
   } do
     File.rm_rf!(application_file_path)
