@@ -1,7 +1,7 @@
 defmodule MagicAuth.MixProject do
   use Mix.Project
 
-  @version "0.2.0"
+  @version "0.2.1"
   @scm_url "https://github.com/gushonorato/magic_auth"
 
   def project do

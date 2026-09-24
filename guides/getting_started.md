@@ -20,7 +20,7 @@ To install Magic Auth, add it to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:magic_auth, "~> 0.1.0"}
+    {:magic_auth, "~> 0.2.1"}
   ]
 end
 ```
