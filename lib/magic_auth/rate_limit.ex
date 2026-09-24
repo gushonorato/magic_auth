@@ -18,6 +18,12 @@ defmodule MagicAuth.RateLimit do
   @one_time_password_request_scale :timer.minutes(1)
   @one_time_password_request_limit 1
 
+  # Prevents brute force attacks by limiting the number of code verification
+  # attempts that can be made for a given email address within a time interval.
+  # Allows 10 attempts every 10 minutes per email address.
+  @login_attempt_scale :timer.minutes(10)
+  @login_attempt_limit 10
+
   def check_one_time_password_request(email) do
     check(
       key(:one_time_password_request, email),
@@ -32,6 +38,10 @@ defmodule MagicAuth.RateLimit do
       @one_time_password_request_scale,
       @one_time_password_request_limit
     )
+  end
+
+  def check_login_attempt(email) do
+    check(key(:login_attempt, email), @login_attempt_scale, @login_attempt_limit)
   end
 
   defp key(action, email), do: {action, String.downcase(email)}

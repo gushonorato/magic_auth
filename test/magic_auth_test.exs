@@ -320,6 +320,54 @@ defmodule MagicAuthTest do
       assert session.user_id == user_id
     end
 
+    test "redirects to log_in when too many attempts are made, even with a correct code", %{
+      conn: conn,
+      code: code,
+      email: email
+    } do
+      config_sandbox(fn ->
+        start_supervised!(MagicAuth.RateLimit)
+        Application.put_env(:magic_auth, :enable_rate_limit, true)
+
+        for _ <- 1..10, do: :ok = MagicAuth.RateLimit.check_login_attempt(email)
+
+        Mox.expect(MagicAuthTestWeb.CallbacksMock, :translate_error, fn :too_many_login_attempts, opts ->
+          assert opts[:countdown] in 1..600
+          "Too many login attempts"
+        end)
+
+        conn = conn |> fetch_flash() |> MagicAuth.log_in(email, code)
+
+        assert redirected_to(conn) == MagicAuth.Config.router().__magic_auth__(:log_in)
+        assert Phoenix.Flash.get(conn.assigns.flash, :error) == "Too many login attempts"
+        refute get_session(conn, :session_token)
+
+        stop_supervised!(MagicAuth.RateLimit)
+      end)
+    end
+
+    test "login attempt rate limit is not bypassed by changing the email case", %{
+      conn: conn,
+      code: code,
+      email: email
+    } do
+      config_sandbox(fn ->
+        start_supervised!(MagicAuth.RateLimit)
+        Application.put_env(:magic_auth, :enable_rate_limit, true)
+
+        for _ <- 1..10, do: :ok = MagicAuth.RateLimit.check_login_attempt(email)
+
+        Mox.stub(MagicAuthTestWeb.CallbacksMock, :translate_error, fn _key, _opts -> "Too many login attempts" end)
+
+        conn = conn |> fetch_flash() |> MagicAuth.log_in(String.upcase(email), code)
+
+        assert redirected_to(conn) == MagicAuth.Config.router().__magic_auth__(:log_in)
+        refute get_session(conn, :session_token)
+
+        stop_supervised!(MagicAuth.RateLimit)
+      end)
+    end
+
     test "redirects to log_in when log_in_requested returns :deny", %{conn: conn, code: code, email: email} do
       Mox.expect(MagicAuthTestWeb.CallbacksMock, :log_in_requested, fn %{email: ^email} -> :deny end)
       Mox.expect(MagicAuthTestWeb.CallbacksMock, :translate_error, fn :access_denied, _opts -> "Access denied" end)

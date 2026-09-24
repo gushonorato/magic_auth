@@ -16,7 +16,6 @@ defmodule MagicAuth do
   import Ecto.Query
   import Plug.Conn
   import Phoenix.Controller
-  alias MagicAuth.TokenBuckets.LoginAttemptTokenBucket
   alias MagicAuth.{Session, OneTimePassword, RateLimit}
 
   @doc """
@@ -144,8 +143,8 @@ defmodule MagicAuth do
   It renews the session ID and clears the whole session
   to avoid fixation attacks.
 
-  Login attempts are rate limited using a token bucket that allows a maximum of
-  10 attempts every 10 minutes per email address.
+  Login attempts are rate limited to a maximum of 10 attempts every 10 minutes
+  per email address (case insensitive).
 
   It also sets a `:live_socket_id` key in the session,
   so LiveView sessions are identified and automatically
@@ -184,15 +183,13 @@ defmodule MagicAuth do
   - `code`: String containing the one-time password code
   """
   def log_in(conn, email, code) do
-    case LoginAttemptTokenBucket.take(email) do
-      {:ok, _count} ->
+    case RateLimit.check_login_attempt(email) do
+      :ok ->
         verify_password(conn, email, code)
 
-      {:error, :rate_limited} ->
+      {:error, :rate_limited, countdown} ->
         error_message =
-          MagicAuth.Config.callback_module().translate_error(:too_many_login_attempts,
-            countdown: LoginAttemptTokenBucket.get_countdown()
-          )
+          MagicAuth.Config.callback_module().translate_error(:too_many_login_attempts, countdown: countdown)
 
         conn
         |> put_flash(:error, error_message)
@@ -583,9 +580,7 @@ defmodule MagicAuth do
   @doc """
   Returns a list of child processes that should be supervised.
 
-  Includes the processes needed for rate limiting:
-  - RateLimit: Limits one-time password requests
-  - LoginAttemptTokenBucket: Limits login attempts
+  Includes the process needed for rate limiting one-time password requests and login attempts.
 
   ## Example
 
@@ -596,9 +591,6 @@ defmodule MagicAuth do
   """
 
   def children do
-    [
-      MagicAuth.RateLimit,
-      MagicAuth.TokenBuckets.LoginAttemptTokenBucket
-    ]
+    [MagicAuth.RateLimit]
   end
 end

@@ -9,13 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+  - Fixed a bypass of the login attempt rate limit. Changing the case of the email (e.g. `User@example.com`) gave
+    10 fresh attempts against the same one-time password, making brute force of the code feasible.
   - Fixed a bypass of the one-time password request rate limit. Changing the case of the email (e.g. `User@example.com`)
     gave a fresh limit for the same address, allowing an attacker to flood the user's inbox.
 
 ### Enhancements
 
-  - One-time password requests are now rate limited with [Hammer](https://hex.pm/packages/hammer). Each email has its
-    own time window, and the countdown shown on the verification page refers to the email being verified.
+  - One-time password requests and login attempts are now rate limited with [Hammer](https://hex.pm/packages/hammer).
+    Each email has its own time window, instead of all limits being reset at the same moment, and the countdown shown
+    on the verification page refers to the email being verified.
 
 ## [0.2.0]
 

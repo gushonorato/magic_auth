@@ -38,6 +38,40 @@ defmodule MagicAuth.RateLimitTest do
     end
   end
 
+  describe "check_login_attempt/1" do
+    test "allows 10 attempts per email" do
+      for _ <- 1..10, do: assert(RateLimit.check_login_attempt("user@example.com") == :ok)
+
+      assert {:error, :rate_limited, countdown} = RateLimit.check_login_attempt("user@example.com")
+      assert countdown in 1..600
+    end
+
+    test "is case insensitive" do
+      for _ <- 1..10, do: :ok = RateLimit.check_login_attempt("user@example.com")
+
+      assert {:error, :rate_limited, _countdown} = RateLimit.check_login_attempt("User@Example.com")
+      assert {:error, :rate_limited, _countdown} = RateLimit.check_login_attempt("USER@EXAMPLE.COM")
+    end
+
+    test "keeps separate limits for different emails" do
+      for _ <- 1..10, do: :ok = RateLimit.check_login_attempt("user1@example.com")
+
+      assert RateLimit.check_login_attempt("user2@example.com") == :ok
+    end
+
+    test "is independent from the one-time password request limit" do
+      :ok = RateLimit.check_one_time_password_request("user@example.com")
+
+      assert RateLimit.check_login_attempt("user@example.com") == :ok
+    end
+
+    test "always allows attempts when rate limit is disabled" do
+      Application.put_env(:magic_auth, :enable_rate_limit, false)
+
+      for _ <- 1..11, do: assert(RateLimit.check_login_attempt("user@example.com") == :ok)
+    end
+  end
+
   describe "one_time_password_request_countdown/1" do
     test "returns 0 when a new request is allowed" do
       assert RateLimit.one_time_password_request_countdown("user@example.com") == 0
