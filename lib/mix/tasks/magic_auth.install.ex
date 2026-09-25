@@ -58,9 +58,8 @@ defmodule Mix.Tasks.MagicAuth.Install do
   defp application_file, do: Mix.Phoenix.context_app() |> Mix.Phoenix.context_lib_path("application.ex")
   defp remember_me_cookie, do: "_#{Mix.Phoenix.context_app()}_remember_me"
 
-  defp migration_file() do
-    file = "20250422184441_create_magic_auth_tables.exs"
-    Mix.Phoenix.context_app_path(Mix.Phoenix.context_app(), Path.join(["priv", repo_path(), "migrations", file]))
+  defp migrations_path() do
+    Mix.Phoenix.context_app_path(Mix.Phoenix.context_app(), Path.join(["priv", repo_path(), "migrations"]))
   end
 
   defp config_file() do
@@ -73,7 +72,7 @@ defmodule Mix.Tasks.MagicAuth.Install do
 
   def run(_args) do
     inject_config()
-    install_magic_auth_migration_file()
+    install_migration_files()
     install_magic_auth_callbacks()
     inject_router()
     install_token_buckets()
@@ -108,19 +107,40 @@ defmodule Mix.Tasks.MagicAuth.Install do
     end
   end
 
-  def install_magic_auth_migration_file() do
-    copy_template("#{@template_dir}/20250422184441_create_magic_auth_tables.exs.eex", migration_file(),
-      repo_module: repo_module()
-    )
+  @doc """
+  Copies the Magic Auth migrations that don't exist in the host project yet.
+
+  A migration is considered installed when a file with the same name, regardless of the timestamp, exists in the
+  migrations directory. This allows running `mix magic_auth.install` again after updating Magic Auth to receive only
+  the new migrations.
+  """
+  def install_migration_files() do
+    "#{@template_dir}/*.exs.eex"
+    |> Path.wildcard()
+    |> Enum.sort()
+    |> Enum.each(&install_migration_file/1)
+  end
+
+  defp install_migration_file(template) do
+    file = Path.basename(template, ".eex")
+    [_timestamp, name] = String.split(file, "_", parts: 2)
+
+    if Path.wildcard(Path.join(migrations_path(), "*_#{name}")) == [] do
+      copy_template(template, Path.join(migrations_path(), file), repo_module: repo_module())
+    end
   end
 
   defp install_magic_auth_callbacks() do
-    copy_template(
-      "#{@template_dir}/magic_auth.ex.eex",
-      Mix.Phoenix.context_app() |> Mix.Phoenix.web_path("magic_auth.ex"),
-      web_module: web_module(),
-      base: Mix.Phoenix.context_app() |> Mix.Phoenix.context_base()
-    )
+    callbacks_file = Mix.Phoenix.context_app() |> Mix.Phoenix.web_path("magic_auth.ex")
+
+    unless File.exists?(callbacks_file) do
+      copy_template(
+        "#{@template_dir}/magic_auth.ex.eex",
+        callbacks_file,
+        web_module: web_module(),
+        base: Mix.Phoenix.context_app() |> Mix.Phoenix.context_base()
+      )
+    end
   end
 
   defp inject_router() do

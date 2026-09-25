@@ -106,6 +106,48 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert content =~ "create table(:magic_auth_one_time_passwords)"
   end
 
+  test "creates only the migrations that are missing" do
+    File.mkdir_p!("priv/repo/migrations")
+    existing_migration = "priv/repo/migrations/20250101000000_create_magic_auth_tables.exs"
+    File.write!(existing_migration, "existing migration")
+
+    capture_io(fn -> run([]) end)
+
+    assert File.read!(existing_migration) == "existing migration"
+    assert [_] = Path.wildcard("priv/repo/migrations/*_create_magic_auth_tables.exs")
+  end
+
+  test "does not overwrite the magic auth callbacks file" do
+    callbacks_file = Mix.Phoenix.context_app() |> Mix.Phoenix.web_path("magic_auth.ex")
+    File.write!(callbacks_file, "customized callbacks")
+
+    capture_io(fn -> run([]) end)
+
+    assert File.read!(callbacks_file) == "customized callbacks"
+  end
+
+  test "does not change any file when run again", %{
+    router_file_path: router_file_path,
+    application_file_path: application_file_path,
+    js_file_path: js_file_path
+  } do
+    capture_io(fn -> run([]) end)
+
+    migrations = Path.wildcard("priv/repo/migrations/*")
+
+    files =
+      ["config/config.exs", router_file_path, application_file_path, js_file_path] ++
+        migrations ++ [Mix.Phoenix.context_app() |> Mix.Phoenix.web_path("magic_auth.ex")]
+
+    contents = Map.new(files, &{&1, File.read!(&1)})
+
+    output = capture_io(fn -> run([]) end)
+
+    refute output =~ "creating"
+    assert Path.wildcard("priv/repo/migrations/*") == migrations
+    assert Map.new(files, &{&1, File.read!(&1)}) == contents
+  end
+
   test "creates magic auth callbacks file" do
     capture_io(fn ->
       run([])

@@ -18,9 +18,8 @@ mix format                        # line_length is 120
 mix docs
 ```
 
-- `mix magic_auth.setup_test_db` builds the test schema from the installer's migration template
-  (`priv/templates/magic_auth.install/*_create_magic_auth_tables.exs.eex`) plus a `users` table. Re-run it after
-  changing that template.
+- `mix magic_auth.setup_test_db` builds the test schema from the installer's migration templates
+  (`priv/templates/magic_auth.install/*.exs.eex`) plus a `users` table. Re-run it after changing or adding a template.
 - E2E tests (`test/e2e`, tagged `:e2e`) run `mix phx.new` with the globally installed `phx_new` archive inside `tmp/`,
   then run `mix magic_auth.install` on the generated project and assert on the files. Their result depends on the
   archive version: CI pins `phx_new 1.7.18` (Elixir 1.18.2 / OTP 27.2), while a newer archive generates different
@@ -54,6 +53,9 @@ mix docs
 - **Installer (`Mix.Tasks.MagicAuth.Install`):** injects code into the host's `config.exs`, router, `application.ex`
   and `app.js` with string matching. It must be idempotent (skip if already injected) and fall back to printing
   manual instructions when the expected pattern isn't found. It supports umbrella projects.
+- **Schema changes are new migration templates.** Never edit a released migration template: add a new
+  `priv/templates/magic_auth.install/<timestamp>_<name>.exs.eex`. Running `mix magic_auth.install` again copies the
+  templates whose `<name>` is missing from the host's migrations directory, which is how existing projects upgrade.
 
 ## Tests
 
