@@ -262,7 +262,19 @@ defmodule MagicAuth do
       |> get_req_header("user-agent")
       |> List.first()
 
-    %{last_ip: format_ip(conn.remote_ip), user_agent: user_agent && String.slice(user_agent, 0, @user_agent_max_length)}
+    %{last_ip: client_ip(conn), user_agent: user_agent && String.slice(user_agent, 0, @user_agent_max_length)}
+  end
+
+  # Behind a proxy, `conn.remote_ip` is the proxy's IP address. The client's IP address is read from the configured
+  # header, falling back to `conn.remote_ip` when the header is missing or doesn't contain a single IP address.
+  defp client_ip(conn) do
+    with header when is_binary(header) <- MagicAuth.Config.client_ip_header(),
+         [value | _] <- get_req_header(conn, String.downcase(header)),
+         {:ok, ip} <- value |> String.trim() |> String.to_charlist() |> :inet.parse_strict_address() do
+      format_ip(ip)
+    else
+      _ -> format_ip(conn.remote_ip)
+    end
   end
 
   defp format_ip(nil), do: nil

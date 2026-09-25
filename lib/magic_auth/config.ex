@@ -30,6 +30,9 @@ defmodule MagicAuth.Config do
   - `:session_activity_update_interval` - (optional, default: `5`) Interval in minutes between updates of the session
   activity (`last_active_at`, `last_ip` and `user_agent`). The activity is updated on the first request after the
   interval, so it doesn't write to the database on every request.
+  - `:client_ip_header` - (optional, default: `nil`) Request header with the client's IP address, stored in the
+  session's `last_ip`. Set it when the application runs behind a proxy, such as `"fly-client-ip"` on Fly.io. When not
+  set, `conn.remote_ip` is used.
   - `:enable_rate_limit` - (optional, default: `true`) Whether to enable rate limiting for authentication attempts.
 
   ## Configuration Example
@@ -51,6 +54,7 @@ defmodule MagicAuth.Config do
     session_validity_in_days: 60,
     session_expiration: :log_in,
     session_activity_update_interval: 5,
+    client_ip_header: "fly-client-ip",
     enable_rate_limit: true,
     repo_opts: fn -> [magic_auth: true] end
   ```
@@ -96,6 +100,10 @@ defmodule MagicAuth.Config do
 
   def session_activity_update_interval do
     Application.get_env(:magic_auth, :session_activity_update_interval, 5)
+  end
+
+  def client_ip_header do
+    Application.get_env(:magic_auth, :client_ip_header)
   end
 
   def endpoint() do

@@ -543,6 +543,52 @@ defmodule MagicAuthTest do
       assert session.last_ip == "::1"
     end
 
+    test "log_in stores the IP address from the configured header", %{conn: conn, code: code, email: email} do
+      Application.put_env(:magic_auth, :client_ip_header, "Fly-Client-IP")
+
+      conn =
+        conn
+        |> Map.put(:remote_ip, {172, 16, 0, 1})
+        |> put_req_header("fly-client-ip", "203.0.113.7")
+        |> MagicAuth.log_in(email, code)
+
+      session = MagicAuth.get_session_by_token(get_session(conn, :session_token))
+      assert session.last_ip == "203.0.113.7"
+    end
+
+    test "updates the activity with the IP address from the configured header", %{conn: conn, email: email} do
+      Application.put_env(:magic_auth, :client_ip_header, "fly-client-ip")
+
+      session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(last_active_at: minutes_ago(5))
+
+      conn
+      |> Map.put(:remote_ip, {172, 16, 0, 1})
+      |> put_req_header("fly-client-ip", "2001:db8::1")
+      |> fetch_with_session(session)
+
+      assert MagicAuth.get_session_by_token(session.token).last_ip == "2001:db8::1"
+    end
+
+    test "falls back to remote_ip when the configured header is missing or invalid", %{conn: conn, email: email} do
+      Application.put_env(:magic_auth, :client_ip_header, "x-forwarded-for")
+
+      for header <- [nil, "203.0.113.7, 198.51.100.1", "invalid"] do
+        session =
+          %{email: email}
+          |> MagicAuth.create_session!()
+          |> update_session!(last_active_at: minutes_ago(5))
+
+        conn = Map.put(conn, :remote_ip, {172, 16, 0, 1})
+        conn = if header, do: put_req_header(conn, "x-forwarded-for", header), else: conn
+        fetch_with_session(conn, session)
+
+        assert MagicAuth.get_session_by_token(session.token).last_ip == "172.16.0.1"
+      end
+    end
+
     test "log_in truncates long user agents", %{conn: conn, code: code, email: email} do
       conn =
         conn
