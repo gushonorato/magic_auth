@@ -692,6 +692,66 @@ defmodule MagicAuthTest do
     end
   end
 
+  describe "delete_expired_sessions/0" do
+    setup do
+      Application.put_env(:magic_auth, :endpoint, MagicAuthTest.FakeLogoutEndpoint)
+      :ok
+    end
+
+    test "disconnects the LiveViews of the deleted sessions", %{email: email} do
+      expired_session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(inserted_at: days_ago(61))
+
+      valid_session = MagicAuth.create_session!(%{email: email})
+
+      MagicAuth.delete_expired_sessions()
+
+      expired_socket_id = MagicAuth.live_socket_id(expired_session.token)
+      valid_socket_id = MagicAuth.live_socket_id(valid_session.token)
+
+      assert_received {:broadcast, ^expired_socket_id, "disconnect", %{}}
+      refute_received {:broadcast, ^valid_socket_id, "disconnect", %{}}
+    end
+
+    test "deletes sessions expired since the log in by default", %{email: email} do
+      expired_session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(inserted_at: days_ago(61), last_active_at: minutes_ago(1))
+
+      valid_session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(inserted_at: days_ago(59), last_active_at: days_ago(59))
+
+      assert {1, nil} = MagicAuth.delete_expired_sessions()
+
+      refute MagicAuth.Repo.get(Session, expired_session.id)
+      assert MagicAuth.Repo.get(Session, valid_session.id)
+    end
+
+    test "deletes sessions expired by inactivity with :inactivity expiration", %{email: email} do
+      Application.put_env(:magic_auth, :session_expiration, :inactivity)
+
+      expired_session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(inserted_at: days_ago(61), last_active_at: days_ago(61))
+
+      valid_session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(inserted_at: days_ago(100), last_active_at: days_ago(59))
+
+      assert {1, nil} = MagicAuth.delete_expired_sessions()
+
+      refute MagicAuth.Repo.get(Session, expired_session.id)
+      assert MagicAuth.Repo.get(Session, valid_session.id)
+    end
+  end
+
   describe "require_authenticated/2" do
     test "redirects when not authenticated", %{conn: conn} do
       Mox.expect(MagicAuthTestWeb.CallbacksMock, :translate_error, fn :unauthorized, _opts ->

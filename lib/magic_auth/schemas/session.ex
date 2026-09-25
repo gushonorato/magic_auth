@@ -68,6 +68,17 @@ defmodule MagicAuth.Session do
     {:ok, query}
   end
 
+  @doc """
+  Returns a query for the sessions that expired, according to `session_validity_in_days` and `expiration`.
+  """
+  def expired_sessions_query(session_validity_in_days, :log_in) do
+    from s in __MODULE__, where: s.inserted_at <= ago(^session_validity_in_days, "day")
+  end
+
+  def expired_sessions_query(session_validity_in_days, :inactivity) do
+    from s in __MODULE__, where: s.last_active_at <= ago(^session_validity_in_days, "day")
+  end
+
   defp valid_sessions_query(session_validity_in_days, :log_in) do
     from s in __MODULE__, where: s.inserted_at > ago(^session_validity_in_days, "day")
   end

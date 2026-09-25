@@ -320,6 +320,37 @@ defmodule MagicAuth do
   end
 
   @doc """
+  Deletes the expired sessions from the database.
+
+  A session is expired `session_validity_in_days` after the log in or after the last activity, depending on the
+  `session_expiration` configuration. Expired sessions can no longer be used to authenticate, but they stay in the
+  database, along with the IP address and user agent, until they are deleted.
+
+  LiveViews connected with the deleted sessions are disconnected, so they are redirected to the log in page when they
+  reconnect.
+
+  Magic Auth doesn't schedule this function. Call it periodically from your application, for example with an
+  [Oban](https://hexdocs.pm/oban) cron job. When using multi-tenancy with query prefixes, call it once for each tenant,
+  as the queries use the configured `repo_opts`.
+
+  Returns `{count, nil}`, where `count` is the number of deleted sessions.
+  """
+  def delete_expired_sessions() do
+    query =
+      from s in Session.expired_sessions_query(
+             MagicAuth.Config.session_validity_in_days(),
+             MagicAuth.Config.session_expiration()
+           ),
+           select: s.token
+
+    {count, tokens} = MagicAuth.Repo.delete_all(query)
+
+    Enum.each(tokens, &MagicAuth.Config.endpoint().broadcast(live_socket_id(&1), "disconnect", %{}))
+
+    {count, nil}
+  end
+
+  @doc """
   Logs out and redirects to the log in page.
 
   It clears all session data for safety.
