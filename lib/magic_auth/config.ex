@@ -35,7 +35,7 @@ defmodule MagicAuth.Config do
   multi-tenancy with query prefixes; call `MagicAuth.delete_expired_sessions/0` for each tenant instead.
   - `:client_ip_header` - (optional, default: `nil`) Request header with the client's IP address, stored in the
   session's `last_ip`. Set it when the application runs behind a proxy, such as `"fly-client-ip"` on Fly.io. When not
-  set, `conn.remote_ip` is used.
+  set, `conn.remote_ip` is used. See the [Sessions guide](sessions.md#client-ip-address-behind-a-proxy).
   - `:enable_rate_limit` - (optional, default: `true`) Whether to enable rate limiting for authentication attempts.
 
   ## Configuration Example

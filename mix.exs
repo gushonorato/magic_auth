@@ -53,6 +53,7 @@ defmodule MagicAuth.MixProject do
       extras: [
         "guides/getting_started.md",
         "guides/log_out_user_or_session.md",
+        "guides/sessions.md",
         "guides/customization.md",
         "guides/multi_tenancy.md",
         "guides/testing.md",

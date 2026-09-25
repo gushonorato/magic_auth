@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `mix magic_auth.install` can now be run again after updating Magic Auth. It creates only the migrations that are
     missing and doesn't overwrite the callbacks module or code that was already injected.
 
+### Documentation
+
+  - Added the [Sessions guide](guides/sessions.md), covering session activity, the client IP address behind a proxy,
+    expiration and deletion of expired sessions.
+
 ### Breaking changes
 
   - The `magic_auth_sessions` table needs the new `last_active_at`, `last_ip` and `user_agent` columns. After updating,
