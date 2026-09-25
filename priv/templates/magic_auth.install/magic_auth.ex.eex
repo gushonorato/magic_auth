@@ -199,6 +199,26 @@ defmodule <%= @web_module %>.MagicAuth do
 #    * `:code` - The one-time password code generated to be sent via email
 #    * `:email` - The user's email address where the code will be sent
 #
+#  ## Sending codes only to registered emails
+#
+#  By default, a code is sent to any email typed in the log in form. To send it only to registered
+#  emails, skip the delivery for the others. The user is still redirected to the verification page,
+#  so the form doesn't reveal which emails are registered.
+#
+#  Deliver the email in the background, so the response takes the same time for registered and
+#  unregistered emails. Otherwise, the time spent delivering the email reveals which ones are registered.
+#  In the example below, the delivery code of this function was moved to `deliver_one_time_password/2`.
+#
+#  ```
+#  def one_time_password_requested(%{code: code, email: email}) do
+#    if Repo.get_by(User, email: email) do
+#      Task.start(fn -> deliver_one_time_password(code, email) end)
+#    end
+#  end
+#  ```
+#
+#  Use the same rule in `log_in_requested/1`, so both callbacks agree on who can log in.
+#
   @impl true
   def one_time_password_requested(%{code: code, email: email}) do
     Swoosh.Email.new()

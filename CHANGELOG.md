@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   - Added the [Sessions guide](guides/sessions.md), covering session activity, the client IP address behind a proxy,
     expiration and deletion of expired sessions.
+  - Added instructions for sending one-time passwords only to registered emails to the
+    [Customization guide](guides/customization.md) and to the generated callbacks module.
 
 ### Breaking changes
 
