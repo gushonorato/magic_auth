@@ -36,6 +36,11 @@ defmodule MagicAuth.Repo do
     MagicAuth.Config.repo_module().delete_all(query, opts)
   end
 
+  def update_all(query, updates) do
+    opts = MagicAuth.Config.repo_opts()
+    MagicAuth.Config.repo_module().update_all(query, updates, opts)
+  end
+
   def get(schema, id) do
     opts = MagicAuth.Config.repo_opts()
     MagicAuth.Config.repo_module().get(schema, id, opts)

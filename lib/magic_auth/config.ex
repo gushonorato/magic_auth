@@ -23,6 +23,9 @@ defmodule MagicAuth.Config do
   - `:one_time_password_expiration` - (optional, default: `10`) Expiration time in minutes for one-time passwords.
   - `:remember_me` - (optional, default: `true`) Whether to enable "remember me" functionality.
   - `:session_validity_in_days` - (optional, default: `60`) How long sessions remain valid.
+  - `:session_activity_update_interval` - (optional, default: `5`) Interval in minutes between updates of the session
+  activity (`last_active_at`, `last_ip` and `user_agent`). The activity is updated on the first request after the
+  interval, so it doesn't write to the database on every request.
   - `:enable_rate_limit` - (optional, default: `true`) Whether to enable rate limiting for authentication attempts.
 
   ## Configuration Example
@@ -42,6 +45,7 @@ defmodule MagicAuth.Config do
     one_time_password_expiration: 10,
     remember_me: true,
     session_validity_in_days: 60,
+    session_activity_update_interval: 5,
     enable_rate_limit: true,
     repo_opts: fn -> [magic_auth: true] end
   ```
@@ -79,6 +83,10 @@ defmodule MagicAuth.Config do
 
   def session_validity_in_days do
     Application.get_env(:magic_auth, :session_validity_in_days, 60)
+  end
+
+  def session_activity_update_interval do
+    Application.get_env(:magic_auth, :session_activity_update_interval, 5)
   end
 
   def endpoint() do

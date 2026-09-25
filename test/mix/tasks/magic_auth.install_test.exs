@@ -106,6 +106,18 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert content =~ "create table(:magic_auth_one_time_passwords)"
   end
 
+  test "creates the migration that adds activity to sessions" do
+    capture_io(fn -> run([]) end)
+
+    assert [migration_file] = Path.wildcard("priv/repo/migrations/*_add_activity_to_magic_auth_sessions.exs")
+
+    content = File.read!(migration_file)
+    assert content =~ "defmodule MagicAuthTest.Repo.Migrations.AddActivityToMagicAuthSessions"
+    assert content =~ "add :last_active_at, :utc_datetime"
+    assert content =~ "add :last_ip, :string"
+    assert content =~ "add :user_agent, :string"
+  end
+
   test "creates only the migrations that are missing" do
     File.mkdir_p!("priv/repo/migrations")
     existing_migration = "priv/repo/migrations/20250101000000_create_magic_auth_tables.exs"
@@ -115,6 +127,7 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
 
     assert File.read!(existing_migration) == "existing migration"
     assert [_] = Path.wildcard("priv/repo/migrations/*_create_magic_auth_tables.exs")
+    assert [_] = Path.wildcard("priv/repo/migrations/*_add_activity_to_magic_auth_sessions.exs")
   end
 
   test "does not overwrite the magic auth callbacks file" do

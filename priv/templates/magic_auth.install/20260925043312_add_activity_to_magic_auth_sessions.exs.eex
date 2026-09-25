@@ -1,0 +1,38 @@
+defmodule <%= @repo_module %>.Migrations.AddActivityToMagicAuthSessions do
+  use Ecto.Migration
+
+  def up do
+    alter table(:magic_auth_sessions) do
+      add :last_active_at, :utc_datetime
+      add :last_ip, :string
+      add :user_agent, :string, size: 512
+    end
+
+    execute "UPDATE #{sessions_table()} SET last_active_at = inserted_at"
+
+    alter table(:magic_auth_sessions) do
+      modify :last_active_at, :utc_datetime, null: false
+    end
+
+    create index(:magic_auth_sessions, [:inserted_at])
+    create index(:magic_auth_sessions, [:last_active_at])
+  end
+
+  def down do
+    drop index(:magic_auth_sessions, [:inserted_at])
+    drop index(:magic_auth_sessions, [:last_active_at])
+
+    alter table(:magic_auth_sessions) do
+      remove :last_active_at
+      remove :last_ip
+      remove :user_agent
+    end
+  end
+
+  defp sessions_table() do
+    case prefix() do
+      nil -> "magic_auth_sessions"
+      prefix -> ~s("#{prefix}".magic_auth_sessions)
+    end
+  end
+end

@@ -215,11 +215,11 @@ defmodule MagicAuth do
   defp perform_log_in(conn, email) do
     case MagicAuth.Config.callback_module().log_in_requested(%{email: email}) do
       :allow ->
-        session = create_session!(%{email: email})
+        session = create_session!(Map.put(session_metadata(conn), :email, email))
         setup_authenticated_session(conn, session)
 
       {:allow, user_id} ->
-        session = create_session!(%{email: email, user_id: user_id})
+        session = create_session!(Map.merge(session_metadata(conn), %{email: email, user_id: user_id}))
         setup_authenticated_session(conn, session)
 
       :deny ->
@@ -252,6 +252,21 @@ defmodule MagicAuth do
       conn
     end
   end
+
+  @user_agent_max_length 512
+
+  @doc false
+  def session_metadata(conn) do
+    user_agent =
+      conn
+      |> get_req_header("user-agent")
+      |> List.first()
+
+    %{last_ip: format_ip(conn.remote_ip), user_agent: user_agent && String.slice(user_agent, 0, @user_agent_max_length)}
+  end
+
+  defp format_ip(nil), do: nil
+  defp format_ip(ip), do: ip |> :inet.ntoa() |> to_string()
 
   @doc false
   def remember_me_options() do
@@ -423,6 +438,7 @@ defmodule MagicAuth do
   def fetch_magic_auth_session(conn, _opts) do
     {session_token, conn} = ensure_user_session_token(conn)
     session = session_token && get_session_by_token(session_token)
+    {conn, session} = maybe_update_session_activity(conn, session)
     user = get_user_from_session(session)
 
     conn
@@ -443,6 +459,32 @@ defmodule MagicAuth do
       end
     end
   end
+
+  # Updates the session activity at most once every `session_activity_update_interval` minutes, so requests don't
+  # write to the database. `update_all` is used instead of `Repo.update` because:
+  #
+  #   * The condition on `last_active_at` makes concurrent requests update the session only once.
+  #   * If the session is deleted after being loaded (e.g. log out in another tab), it updates no rows instead of
+  #     raising `Ecto.StaleEntryError`.
+  defp maybe_update_session_activity(conn, %Session{} = session) do
+    now = DateTime.utc_now(:second)
+    threshold = DateTime.add(now, -MagicAuth.Config.session_activity_update_interval(), :minute)
+
+    if DateTime.compare(session.last_active_at, threshold) == :gt do
+      {conn, session}
+    else
+      changes = Map.put(session_metadata(conn), :last_active_at, now)
+
+      MagicAuth.Repo.update_all(
+        from(s in Session, where: s.id == ^session.id and s.last_active_at <= ^threshold),
+        set: Keyword.new(changes)
+      )
+
+      {conn, struct(session, changes)}
+    end
+  end
+
+  defp maybe_update_session_activity(conn, nil), do: {conn, nil}
 
   defp get_user_from_session(%Session{user_id: user_id}) when not is_nil(user_id) do
     MagicAuth.Repo.get_user(user_id)

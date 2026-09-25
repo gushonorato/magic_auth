@@ -9,8 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Enhancements
 
+  - Sessions now store the time of the last activity (`last_active_at`), the last IP address (`last_ip`) and the user
+    agent (`user_agent`). They are updated on the first request after the interval configured in
+    `:session_activity_update_interval` (default: 5 minutes), so requests don't write to the database every time.
   - `mix magic_auth.install` can now be run again after updating Magic Auth. It creates only the migrations that are
     missing and doesn't overwrite the callbacks module or code that was already injected.
+
+### Breaking changes
+
+  - The `magic_auth_sessions` table needs the new `last_active_at`, `last_ip` and `user_agent` columns. After updating,
+    run the installer to create the migration, then run it:
+
+    ```
+    $ mix magic_auth.install
+    $ mix ecto.migrate
+    ```
+
+    The migration fills `last_active_at` of existing sessions with the log in time. When using multi-tenancy with
+    query prefixes, run the migration for each tenant.
 
 ## [0.2.1] - 2026-09-24
 

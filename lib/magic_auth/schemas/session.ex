@@ -15,6 +15,9 @@ defmodule MagicAuth.Session do
     field :email, :string
     field :token, :binary, redact: true
     field :user_id, :integer
+    field :last_active_at, :utc_datetime
+    field :last_ip, :string
+    field :user_agent, :string
 
     timestamps(type: :utc_datetime)
   end
@@ -39,11 +42,12 @@ defmodule MagicAuth.Session do
   session they deem invalid.
   """
   def build_session(attrs) do
-    attrs = Map.take(attrs, [:email, :user_id])
+    attrs = Map.take(attrs, [:email, :user_id, :last_ip, :user_agent])
 
     %__MODULE__{}
-    |> cast(attrs, [:email, :user_id])
+    |> cast(attrs, [:email, :user_id, :last_ip, :user_agent])
     |> put_change(:token, :crypto.strong_rand_bytes(@rand_size))
+    |> put_change(:last_active_at, DateTime.utc_now(:second))
     |> apply_changes()
   end
 

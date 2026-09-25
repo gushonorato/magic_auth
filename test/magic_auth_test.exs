@@ -498,6 +498,117 @@ defmodule MagicAuthTest do
     end
   end
 
+  describe "session activity" do
+    defp update_session!(session, changes) do
+      session
+      |> Ecto.Changeset.change(changes)
+      |> MagicAuth.Config.repo_module().update!()
+    end
+
+    defp minutes_ago(minutes), do: DateTime.add(DateTime.utc_now(:second), -minutes, :minute)
+
+    defp fetch_with_session(conn, session) do
+      conn
+      |> put_session(:session_token, session.token)
+      |> MagicAuth.fetch_magic_auth_session([])
+    end
+
+    test "log_in stores the IP address, user agent and activity of the session", %{
+      conn: conn,
+      code: code,
+      email: email
+    } do
+      conn =
+        conn
+        |> Map.put(:remote_ip, {192, 168, 0, 10})
+        |> put_req_header("user-agent", "Mozilla/5.0")
+        |> MagicAuth.log_in(email, code)
+
+      session = MagicAuth.get_session_by_token(get_session(conn, :session_token))
+
+      assert session.last_ip == "192.168.0.10"
+      assert session.user_agent == "Mozilla/5.0"
+      assert DateTime.diff(DateTime.utc_now(), session.last_active_at) < 5
+    end
+
+    test "log_in stores IPv6 addresses", %{conn: conn, code: code, email: email} do
+      conn =
+        conn
+        |> Map.put(:remote_ip, {0, 0, 0, 0, 0, 0, 0, 1})
+        |> MagicAuth.log_in(email, code)
+
+      session = MagicAuth.get_session_by_token(get_session(conn, :session_token))
+      assert session.last_ip == "::1"
+    end
+
+    test "log_in truncates long user agents", %{conn: conn, code: code, email: email} do
+      conn =
+        conn
+        |> put_req_header("user-agent", String.duplicate("a", 1000))
+        |> MagicAuth.log_in(email, code)
+
+      session = MagicAuth.get_session_by_token(get_session(conn, :session_token))
+      assert String.length(session.user_agent) == 512
+    end
+
+    test "does not update the activity before the update interval", %{conn: conn, email: email} do
+      last_active_at = minutes_ago(4)
+
+      session =
+        %{email: email, last_ip: "10.0.0.1", user_agent: "Old"}
+        |> MagicAuth.create_session!()
+        |> update_session!(last_active_at: last_active_at)
+
+      conn =
+        conn
+        |> Map.put(:remote_ip, {10, 0, 0, 2})
+        |> put_req_header("user-agent", "New")
+        |> fetch_with_session(session)
+
+      assert %Session{last_ip: "10.0.0.1", user_agent: "Old", last_active_at: ^last_active_at} =
+               conn.assigns.current_session
+
+      assert %Session{last_ip: "10.0.0.1", user_agent: "Old", last_active_at: ^last_active_at} =
+               MagicAuth.get_session_by_token(session.token)
+    end
+
+    test "updates the activity after the update interval", %{conn: conn, email: email} do
+      session =
+        %{email: email, last_ip: "10.0.0.1", user_agent: "Old"}
+        |> MagicAuth.create_session!()
+        |> update_session!(last_active_at: minutes_ago(5))
+
+      conn =
+        conn
+        |> Map.put(:remote_ip, {10, 0, 0, 2})
+        |> put_req_header("user-agent", "New")
+        |> fetch_with_session(session)
+
+      updated_session = MagicAuth.get_session_by_token(session.token)
+
+      assert %Session{last_ip: "10.0.0.2", user_agent: "New"} = updated_session
+      assert DateTime.diff(DateTime.utc_now(), updated_session.last_active_at) < 5
+      assert conn.assigns.current_session == updated_session
+    end
+
+    test "uses the configured update interval", %{conn: conn, email: email} do
+      Application.put_env(:magic_auth, :session_activity_update_interval, 30)
+
+      session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(last_active_at: minutes_ago(10))
+
+      fetch_with_session(conn, session)
+      assert MagicAuth.get_session_by_token(session.token).last_active_at == session.last_active_at
+
+      session = update_session!(session, last_active_at: minutes_ago(30))
+
+      fetch_with_session(conn, session)
+      refute MagicAuth.get_session_by_token(session.token).last_active_at == session.last_active_at
+    end
+  end
+
   describe "require_authenticated/2" do
     test "redirects when not authenticated", %{conn: conn} do
       Mox.expect(MagicAuthTestWeb.CallbacksMock, :translate_error, fn :unauthorized, _opts ->
