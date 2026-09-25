@@ -507,6 +507,8 @@ defmodule MagicAuthTest do
 
     defp minutes_ago(minutes), do: DateTime.add(DateTime.utc_now(:second), -minutes, :minute)
 
+    defp days_ago(days), do: DateTime.add(DateTime.utc_now(:second), -days, :day)
+
     defp fetch_with_session(conn, session) do
       conn
       |> put_session(:session_token, session.token)
@@ -606,6 +608,87 @@ defmodule MagicAuthTest do
 
       fetch_with_session(conn, session)
       refute MagicAuth.get_session_by_token(session.token).last_active_at == session.last_active_at
+    end
+
+    test "session expires after the validity counted from the log in by default", %{conn: conn, email: email} do
+      session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(inserted_at: days_ago(61), last_active_at: minutes_ago(1))
+
+      conn = fetch_with_session(conn, session)
+      assert conn.assigns.current_session == nil
+    end
+
+    test "session expires after the validity counted from the last activity with :inactivity expiration", %{
+      conn: conn,
+      email: email
+    } do
+      Application.put_env(:magic_auth, :session_expiration, :inactivity)
+
+      active_session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(inserted_at: days_ago(100), last_active_at: days_ago(59))
+
+      inactive_session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(inserted_at: days_ago(61), last_active_at: days_ago(61))
+
+      assert %Session{} = fetch_with_session(conn, active_session).assigns.current_session
+      assert fetch_with_session(conn, inactive_session).assigns.current_session == nil
+    end
+
+    test "renews the remember me cookie when updating the activity with :inactivity expiration", %{
+      conn: conn,
+      email: email
+    } do
+      Application.put_env(:magic_auth, :session_expiration, :inactivity)
+
+      session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(last_active_at: minutes_ago(5))
+
+      conn = fetch_with_session(conn, session)
+
+      assert %{max_age: max_age} = conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
+      assert max_age == 60 * 24 * 60 * 60
+    end
+
+    test "does not renew the remember me cookie when the activity is not updated", %{conn: conn, email: email} do
+      Application.put_env(:magic_auth, :session_expiration, :inactivity)
+
+      session = MagicAuth.create_session!(%{email: email})
+      conn = fetch_with_session(conn, session)
+
+      refute conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
+    end
+
+    test "does not renew the remember me cookie with :log_in expiration", %{conn: conn, email: email} do
+      session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(last_active_at: minutes_ago(5))
+
+      conn = fetch_with_session(conn, session)
+
+      refute conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
+    end
+
+    test "does not renew the remember me cookie when remember_me is disabled", %{conn: conn, email: email} do
+      Application.put_env(:magic_auth, :session_expiration, :inactivity)
+      Application.put_env(:magic_auth, :remember_me, false)
+
+      session =
+        %{email: email}
+        |> MagicAuth.create_session!()
+        |> update_session!(last_active_at: minutes_ago(5))
+
+      conn = fetch_with_session(conn, session)
+
+      refute conn.resp_cookies[MagicAuth.Config.remember_me_cookie()]
     end
   end
 

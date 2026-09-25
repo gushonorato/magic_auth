@@ -309,7 +309,13 @@ defmodule MagicAuth do
   Gets the session with the given token.
   """
   def get_session_by_token(token) do
-    {:ok, query} = Session.verify_session_token_query(token, MagicAuth.Config.session_validity_in_days())
+    {:ok, query} =
+      Session.verify_session_token_query(
+        token,
+        MagicAuth.Config.session_validity_in_days(),
+        MagicAuth.Config.session_expiration()
+      )
+
     MagicAuth.Repo.one(query)
   end
 
@@ -480,11 +486,19 @@ defmodule MagicAuth do
         set: Keyword.new(changes)
       )
 
-      {conn, struct(session, changes)}
+      {maybe_renew_remember_me_cookie(conn, session.token), struct(session, changes)}
     end
   end
 
   defp maybe_update_session_activity(conn, nil), do: {conn, nil}
+
+  # With expiration by inactivity, the cookie must be renewed to not expire in the browser while the session is valid.
+  defp maybe_renew_remember_me_cookie(conn, token) do
+    case MagicAuth.Config.session_expiration() do
+      :inactivity -> maybe_write_remember_me_cookie(conn, token)
+      :log_in -> conn
+    end
+  end
 
   defp get_user_from_session(%Session{user_id: user_id}) when not is_nil(user_id) do
     MagicAuth.Repo.get_user(user_id)

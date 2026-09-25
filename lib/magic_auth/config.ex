@@ -23,6 +23,10 @@ defmodule MagicAuth.Config do
   - `:one_time_password_expiration` - (optional, default: `10`) Expiration time in minutes for one-time passwords.
   - `:remember_me` - (optional, default: `true`) Whether to enable "remember me" functionality.
   - `:session_validity_in_days` - (optional, default: `60`) How long sessions remain valid.
+  - `:session_expiration` - (optional, default: `:log_in`) What the session validity is counted from. With `:log_in`,
+  sessions expire `session_validity_in_days` after the log in. With `:inactivity`, they expire
+  `session_validity_in_days` after the last request, and the "remember me" cookie is renewed as the user keeps using
+  the application.
   - `:session_activity_update_interval` - (optional, default: `5`) Interval in minutes between updates of the session
   activity (`last_active_at`, `last_ip` and `user_agent`). The activity is updated on the first request after the
   interval, so it doesn't write to the database on every request.
@@ -45,6 +49,7 @@ defmodule MagicAuth.Config do
     one_time_password_expiration: 10,
     remember_me: true,
     session_validity_in_days: 60,
+    session_expiration: :log_in,
     session_activity_update_interval: 5,
     enable_rate_limit: true,
     repo_opts: fn -> [magic_auth: true] end
@@ -83,6 +88,10 @@ defmodule MagicAuth.Config do
 
   def session_validity_in_days do
     Application.get_env(:magic_auth, :session_validity_in_days, 60)
+  end
+
+  def session_expiration do
+    Application.get_env(:magic_auth, :session_expiration, :log_in)
   end
 
   def session_activity_update_interval do

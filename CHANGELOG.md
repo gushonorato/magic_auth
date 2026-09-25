@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Sessions now store the time of the last activity (`last_active_at`), the last IP address (`last_ip`) and the user
     agent (`user_agent`). They are updated on the first request after the interval configured in
     `:session_activity_update_interval` (default: 5 minutes), so requests don't write to the database every time.
+  - Added the `:session_expiration` configuration. With the default `:log_in`, sessions expire
+    `session_validity_in_days` after the log in, as before. With `:inactivity`, they expire `session_validity_in_days`
+    after the last activity, and the "remember me" cookie is renewed as the user keeps using the application.
   - `mix magic_auth.install` can now be run again after updating Magic Auth. It creates only the migrations that are
     missing and doesn't overwrite the callbacks module or code that was already injected.
 

@@ -57,13 +57,22 @@ defmodule MagicAuth.Session do
   The query returns the user found by the token, if any.
 
   The token is valid if it matches the value in the database and it has
-  not expired (after @session_validity_in_days).
+  not expired (after `session_validity_in_days`, counted from the log in or
+  from the last activity, depending on `expiration`).
   """
-  def verify_session_token_query(token, session_validity_in_days) do
+  def verify_session_token_query(token, session_validity_in_days, expiration \\ :log_in) do
     query =
-      from s in __MODULE__,
-        where: s.token == ^token and s.inserted_at > ago(^session_validity_in_days, "day")
+      from s in valid_sessions_query(session_validity_in_days, expiration),
+        where: s.token == ^token
 
     {:ok, query}
+  end
+
+  defp valid_sessions_query(session_validity_in_days, :log_in) do
+    from s in __MODULE__, where: s.inserted_at > ago(^session_validity_in_days, "day")
+  end
+
+  defp valid_sessions_query(session_validity_in_days, :inactivity) do
+    from s in __MODULE__, where: s.last_active_at > ago(^session_validity_in_days, "day")
   end
 end
