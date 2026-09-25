@@ -341,9 +341,9 @@ defmodule MagicAuth do
   LiveViews connected with the deleted sessions are disconnected, so they are redirected to the log in page when they
   reconnect.
 
-  Magic Auth doesn't schedule this function. Call it periodically from your application, for example with an
-  [Oban](https://hexdocs.pm/oban) cron job. When using multi-tenancy with query prefixes, call it once for each tenant,
-  as the queries use the configured `repo_opts`.
+  To call it periodically, enable `:delete_expired_sessions` (see `MagicAuth.ExpiredSessionsCleaner`) or schedule it
+  in your application, for example with an [Oban](https://hexdocs.pm/oban) cron job. When using multi-tenancy with
+  query prefixes, call it once for each tenant, as the queries use the configured `repo_opts`.
 
   Returns `{count, nil}`, where `count` is the number of deleted sessions.
   """
@@ -679,7 +679,8 @@ defmodule MagicAuth do
   @doc """
   Returns a list of child processes that should be supervised.
 
-  Includes the process needed for rate limiting one-time password requests and login attempts.
+  Includes the process needed for rate limiting one-time password requests and login attempts and, when
+  `:delete_expired_sessions` is enabled, `MagicAuth.ExpiredSessionsCleaner`.
 
   ## Example
 
@@ -690,6 +691,10 @@ defmodule MagicAuth do
   """
 
   def children do
-    [MagicAuth.RateLimit]
+    [MagicAuth.RateLimit] ++ expired_sessions_cleaner_children()
+  end
+
+  defp expired_sessions_cleaner_children() do
+    if MagicAuth.Config.delete_expired_sessions?(), do: [MagicAuth.ExpiredSessionsCleaner], else: []
   end
 end

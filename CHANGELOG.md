@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     after the last activity, and the "remember me" cookie is renewed as the user keeps using the application.
   - Added `MagicAuth.delete_expired_sessions/0` to delete expired sessions from the database and disconnect the
     LiveViews connected with them.
+  - Added the `:delete_expired_sessions` configuration. When enabled, `MagicAuth.children/0` includes
+    `MagicAuth.ExpiredSessionsCleaner`, which deletes the expired sessions when the application starts and then once
+    a day.
   - `mix magic_auth.install` can now be run again after updating Magic Auth. It creates only the migrations that are
     missing and doesn't overwrite the callbacks module or code that was already injected.
 
