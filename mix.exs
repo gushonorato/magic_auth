@@ -41,6 +41,7 @@ defmodule MagicAuth.MixProject do
       {:bcrypt_elixir, "~> 3.1"},
       {:hammer, "~> 7.5"},
       {:mox, "~> 1.0", only: :test},
+      {:phoenix_ecto, "~> 4.0", only: :test},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
   end

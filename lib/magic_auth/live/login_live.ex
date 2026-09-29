@@ -11,7 +11,17 @@ defmodule MagicAuth.LoginLive do
 
   def mount(_params, _one_time_password, socket) do
     form = %OneTimePassword{} |> OneTimePassword.changeset(%{}) |> to_auth_form()
-    {:ok, assign(socket, form: form)}
+    {:ok, socket |> assign(form: form) |> assign_page_title(:log_in)}
+  end
+
+  defp assign_page_title(socket, page) do
+    module = MagicAuth.Config.callback_module()
+
+    if Code.ensure_loaded?(module) and function_exported?(module, :page_title, 1) do
+      assign(socket, page_title: module.page_title(page))
+    else
+      socket
+    end
   end
 
   def handle_event("validate", %{"auth" => attrs}, socket) do

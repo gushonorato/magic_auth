@@ -1,5 +1,10 @@
 Mox.defmock(MagicAuthTestWeb.CallbacksMock, for: MagicAuth.Callbacks)
 
+Mox.defmock(MagicAuthTestWeb.CallbacksWithoutOptionalMock,
+  for: MagicAuth.Callbacks,
+  skip_optional_callbacks: true
+)
+
 Application.put_env(:magic_auth, :repo, MagicAuthTest.Repo)
 Application.put_env(:magic_auth, :callbacks, MagicAuthTestWeb.CallbacksMock)
 Application.put_env(:magic_auth, :router, MagicAuthTestWeb.Router)

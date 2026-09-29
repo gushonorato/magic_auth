@@ -4,9 +4,26 @@ The generator will create a file at `lib/my_app_web/magic_auth.ex` (or at `apps/
 
 - The log in form appearance by modifying `log_in_form/1`.
 - The verification form appearance by modifying `verify_form/1`.
+- The page titles by modifying `page_title/1`.
 - E-mail templates by modifying `one_time_password_requested/1`, `text_email_body/1`, and `html_email_body/1`.
 - Access control logic by modifying `log_in_requested/1`.
 - Error message translations by modifying `translate_error/1`.
+
+## Page titles
+
+The optional `page_title/1` callback sets the title of the log in page (`:log_in`) and of the verification page
+(`:password`). Magic Auth assigns its result to `@page_title`, which the `<.live_title>` component of your root layout
+shows in the browser tab. The last clause returns the title of the log in page and of any page added in future
+versions of Magic Auth:
+
+```elixir
+def page_title(:password), do: gettext("Enter verification code")
+def page_title(_page), do: gettext("Sign in")
+```
+
+Callbacks modules generated before this callback existed don't implement it, and `@page_title` isn't assigned. Add the
+function above to your callbacks module to set the titles.
+
 ## Sending codes only to registered emails
 
 By default, Magic Auth generates a code and calls `one_time_password_requested/1` for any email typed in the log in

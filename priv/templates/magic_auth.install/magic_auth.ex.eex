@@ -9,6 +9,7 @@ defmodule <%= @web_module %>.MagicAuth do
   #
   # - Log in form rendering for email input
   # - One-time password verification form rendering
+  # - Page titles
   # - Email delivery of one-time password codes
   # - HTML and text email templates
   # - Error message translations
@@ -27,6 +28,7 @@ defmodule <%= @web_module %>.MagicAuth do
   #
   # - The log in form appearance by modifying `log_in_form/1`
   # - The verification form appearance by modifying `verify_form/1`
+  # - The page titles by modifying `page_title/1`
   # - Email templates by modifying `one_time_password_requested/1`, `text_email_body/1` and `html_email_body/1`
   # - Access control logic by modifying `log_in_requested/1`
   # - Error message translations by modifying `translate_error/1`
@@ -187,6 +189,22 @@ defmodule <%= @web_module %>.MagicAuth do
     </div>
     """
   end
+
+  # Returns the title of the Magic Auth pages. It is assigned to `@page_title`, which the
+  # `<.live_title>` component of your root layout shows in the browser tab.
+  #
+  # Receives the page being rendered:
+  #
+  #   * `:log_in` - The log in page, rendered by `log_in_form/1`
+  #   * `:password` - The verification page, rendered by `verify_form/1`
+  #
+  # The last clause returns the title of the log in page and of any page added in future versions
+  # of Magic Auth.
+  #
+  # This callback is optional. If you remove it, `@page_title` isn't assigned in these pages.
+  @impl true
+  def page_title(:password), do: gettext("Enter verification code")
+  def page_title(_page), do: gettext("Sign in")
 
 #  Callback called when the user requests a one-time password in `MagicAuth.LoginLive`.
 #

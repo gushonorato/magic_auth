@@ -177,6 +177,8 @@ defmodule Mix.Tasks.MagicAuth.InstallTest do
     assert content =~ "use MagicAuthWeb, :html"
     assert content =~ "def log_in_form(assigns) do"
     assert content =~ "def verify_form(assigns) do"
+    assert content =~ "def page_title(:password), do: gettext(\"Enter verification code\")"
+    assert content =~ "def page_title(_page), do: gettext(\"Sign in\")"
     assert content =~ "defp one_time_password_input(assigns) do"
     assert content =~ "def log_in_requested(%{email: _email}), do: :allow"
     assert content =~ "def one_time_password_requested(%{code: code, email: email}) do"

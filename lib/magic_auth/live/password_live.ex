@@ -9,7 +9,17 @@ defmodule MagicAuth.PasswordLive do
       :timer.send_interval(:timer.seconds(1), :update_countdown)
     end
 
-    {:ok, assign(socket, form: to_password_form(nil), email: nil, error: nil)}
+    {:ok, socket |> assign(form: to_password_form(nil), email: nil, error: nil) |> assign_page_title(:password)}
+  end
+
+  defp assign_page_title(socket, page) do
+    module = MagicAuth.Config.callback_module()
+
+    if Code.ensure_loaded?(module) and function_exported?(module, :page_title, 1) do
+      assign(socket, page_title: module.page_title(page))
+    else
+      socket
+    end
   end
 
   defp to_password_form(password), do: to_form(%{"password" => password}, as: "auth")

@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added the `:delete_expired_sessions` configuration. When enabled, `MagicAuth.children/0` includes
     `MagicAuth.ExpiredSessionsCleaner`, which deletes the expired sessions when the application starts and then once
     a day.
+  - Added the optional `page_title/1` callback, which sets the title of the log in page (`:log_in`) and of the
+    verification page (`:password`). Newly generated callbacks modules implement it. In existing projects, add it to
+    the callbacks module, as described in the [Customization guide](guides/customization.md#page-titles).
   - `mix magic_auth.install` can now be run again after updating Magic Auth. It creates only the migrations that are
     missing and doesn't overwrite the callbacks module or code that was already injected.
 
